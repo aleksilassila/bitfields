@@ -12,6 +12,8 @@ Create a server inside `bitfields/server`: `python3 main.py`
 
 Start frontend inside `bitfields/client`: `yarn dev` `(npm run dev)`
 
+Head to [localhost:3000](http://localhost:3000)
+
 OR alternatively
 
 Export frontend as static web page for serverless use:
