@@ -8,17 +8,15 @@ My latest project, a text-based .io style game powered by python, websockets and
 
 ## To get started:
 
-Create a server inside `bitfields/server`: `python3 main.py`
+-   Create a server inside `bitfields/server`: `python3 main.py`
 
-Start frontend inside `bitfields/client`: `yarn dev` `(npm run dev)`
+-   Start frontend inside `bitfields/client`: `yarn dev` `(npm run dev)`
 
-Head to [localhost:3000](http://localhost:3000)
+-   Head to [localhost:3000](http://localhost:3000)
 
-OR alternatively
+OR alternatively export frontend as static web page for serverless use:
 
-Export frontend as static web page for serverless use:
-
-Inside `bitfields/client`: `yarn export` `(npm run export)`
+-   Inside `bitfields/client`: `yarn export` `(npm run export)`
 
 ## Screenshots
 
