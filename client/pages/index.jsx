@@ -7,6 +7,7 @@ class Home extends React.Component {
         const startGame = () => {
             let move = [0, 0, 0, 0]; // w, d, s, a
             let shoot = false;
+            let pick = false;
             let map = [];
 
             const c = document.getElementById("game");
@@ -34,7 +35,12 @@ class Home extends React.Component {
                     payload.s = true;
                 }
 
+                if (pick) {
+                    payload.p = true;
+                }
+
                 shoot = null;
+                pick = false;
                 moveDir = null;
 
                 payload !== {} ? ws.send(JSON.stringify(payload)) : null;
@@ -47,6 +53,13 @@ class Home extends React.Component {
                 if ("map" in action) {
                     map = action.map;
                     return;
+                }
+
+                // Apply updates to map
+                for (let key in action.u) {
+                    const pos = action.u[key].p;
+
+                    map[pos[2]][pos[1]][pos[0]] = action.u[key].c;
                 }
 
                 // Copy temp map to print
@@ -67,6 +80,7 @@ class Home extends React.Component {
                     }
                 }
 
+                // Bullets
                 if (action.b && !(action.b === {})) {
                     for (let key in action.b) {
                         const pos = action.b[key].p;
@@ -167,6 +181,8 @@ class Home extends React.Component {
                     move[3] = 1;
                 } else if (e.code === "Space") {
                     shoot = true;
+                } else if (e.key.toLowerCase() === "c") {
+                    pick = true;
                 }
             };
 

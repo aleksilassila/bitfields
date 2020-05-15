@@ -14,10 +14,9 @@ EMPTY_CHAR = " "
 
 class Game:
     def __init__(self):
+        # Game logic
         self.tickrate = 15 # 15 ticks per second
         self.players = {}
-        self.bullets = {}
-        self.bulletsIndex = 0
         """ players =
         playerId: {
             socket: websocket,
@@ -27,6 +26,11 @@ class Game:
             dead: False
         }
         """
+        self.bullets = {}
+        self.bulletsIndex = 0
+
+        # Game managment
+        self.titlesToUpdate = []
         self.deadConnections = []
         self.isDeadConnections = False
         self.mapDimensions = (400, 200)
@@ -52,6 +56,7 @@ class Game:
 
             if self.isDeadConnections:
                 self.removeDeadConnections()
+
             self.updateBullets()
             await self.updatePlayers()
             await asyncio.sleep(1/self.tickrate)
@@ -59,6 +64,7 @@ class Game:
     async def updatePlayers(self):
         players = {}
         bullets = {}
+        updates = []
 
         for playerId in self.players:
             players[playerId] = {
@@ -72,13 +78,18 @@ class Game:
                 "f": self.bullets[bulletKey]["floor"]
             }
 
+        for pos in self.titlesToUpdate:
+            updates.append({ "p": pos, "c": self.getTitle((pos[0], pos[1]), pos[2]) })
+        self.titlesToUpdate = []
+
         for playerId in self.players:
             try:
                 await self.players[playerId]["socket"].send(json.dumps({
                     "p": players, # Player positions
                     "i": playerId, # Self playerid
                     "f": self.players[playerId]["floor"], # Floor
-                    "b": bullets # Bullets
+                    "b": bullets, # Bullets
+                    "u": updates,
                 }))
             
             except Exception as e:
@@ -89,13 +100,16 @@ class Game:
     def removeDeadConnections(self):
         for playerId in self.deadConnections:
             try:
+                # Keep amount of boulders the same
+                self.createRandomBoulder(self.players[playerId]["bouldersPicked"])
                 self.players.pop(playerId)
                 print(f"[-] Removed player {playerId}")
-            except:
-                pass
+                
+                self.deadConnections = []
+                self.isDeadConnections = False
+            except Exception as e:
+                print(e)
         
-        self.deadConnections = []
-        self.isDeadConnections = False
 
     async def managePlayer(self, playerId):
         await self.players[playerId]["socket"].send(json.dumps({
@@ -115,6 +129,9 @@ class Game:
 
                     if "s" in action:
                         self.shoot(playerId)
+
+                    if "p" in action:
+                        self.pickOrPlace(playerId)
                 
             except Exception as e:
                 print(f"[-] Dead connection for {playerId}")
@@ -125,8 +142,8 @@ class Game:
     
 
     ## GAME LOGIC
-    def getTitle(self, x, y, floor=1):
-        char = self.map[floor][y][x]
+    def getTitle(self, pos, floor=1):
+        char = self.map[floor][pos[1]][pos[0]]
         if char in [WALL_CHAR, BOULDER_CHAR]:
             return char
 
@@ -136,7 +153,7 @@ class Game:
             if self.players[playerId]["floor"] == floor:
                 playerPositions.append(self.players[playerId]["position"])
 
-        if (x, y) in playerPositions:
+        if pos in playerPositions:
             return PLAYER_CHAR
 
         if char in [LADDER_CHAR, GRASS_CHAR, GRASS_ALT_CHAR, BUSH_CHAR]:
@@ -159,7 +176,7 @@ class Game:
     def getSpawnPosition(self):
         while True:
             pos = (randrange(self.mapDimensions[0]), randrange(self.mapDimensions[1]))
-            if self.getTitle(pos[0], pos[1], 1) not in [PLAYER_CHAR, BOULDER_CHAR, WALL_CHAR]:
+            if self.getTitle(pos, 1) not in [PLAYER_CHAR, BOULDER_CHAR, WALL_CHAR]:
                 return pos
 
     def movePlayer(self, playerId, direction):
@@ -168,7 +185,7 @@ class Game:
         pos = self.getNextPos(player["position"], player["facing"])
 
         if self.mapDimensions[0] - 1 >= pos[0] >= 0 and self.mapDimensions[1] - 1 >= pos[1] >= 0:
-            title = self.getTitle(pos[0], pos[1], player["floor"])
+            title = self.getTitle(pos, player["floor"])
 
             if title == LADDER_CHAR:
                 player["floor"] = 0 if player["floor"] == 1 else 1
@@ -193,7 +210,7 @@ class Game:
 
         if self.mapDimensions[0] - 1 < pos[0] or pos[0] < 0 or self.mapDimensions[1] - 1 < pos[1] or pos[1] < 0:
             return
-        elif self.getTitle(pos[0], pos[1], player["floor"]) in [BOULDER_CHAR, WALL_CHAR]:
+        elif self.getTitle(pos, player["floor"]) in [BOULDER_CHAR, WALL_CHAR]:
             return
 
         self.bullets[index] = {
@@ -212,7 +229,7 @@ class Game:
             if self.mapDimensions[0] - 1 < pos[0] or pos[0] < 0 or self.mapDimensions[1] - 1 < pos[1] or pos[1] < 0:
                 toRemove.append(bulletKey)
 
-            elif self.getTitle(pos[0], pos[1], bullet["floor"]) in [BOULDER_CHAR, WALL_CHAR]:
+            elif self.getTitle(pos, bullet["floor"]) in [BOULDER_CHAR, WALL_CHAR]:
                 toRemove.append(bulletKey)
 
             else:
@@ -232,3 +249,35 @@ class Game:
         player["dead"] = True
         player["position"] = (None, None)
         player["floor"] = 1
+
+    def pick(self, player, pos):
+        player["bouldersPicked"] += 1
+        self.map[player["floor"]][pos[1]][pos[0]] = EMPTY_CHAR
+        self.titlesToUpdate.append((pos[0], pos[1], player["floor"]))
+
+    def place(self, player, pos):
+        player["bouldersPicked"] -= 1
+        self.map[player["floor"]][pos[1]][pos[0]] = BOULDER_CHAR
+        self.titlesToUpdate.append((pos[0], pos[1], player["floor"]))
+
+    def pickOrPlace(self, playerId):
+        player = self.players[playerId]
+        pos = self.getNextPos(player["position"], player["facing"])
+        title = self.getTitle(pos, player["floor"])
+
+        if title == EMPTY_CHAR and player["bouldersPicked"] > 0:
+            self.place(player, pos)
+        elif title == BOULDER_CHAR and player["bouldersPicked"] < 2:
+            self.pick(player, pos)
+
+    def createRandomBoulder(self, count):
+        for i in range(count):
+            while True:
+                pos = (randrange(0, self.mapDimensions[0]), randrange(0, self.mapDimensions[1]))
+                floor = randrange(0, len(self.map))
+
+                if self.getTitle(pos, floor) == EMPTY_CHAR:
+                    self.map[floor][pos[1]][pos[0]] = BOULDER_CHAR
+                    self.titlesToUpdate.append((pos[0], pos[1], floor))
+                    break
+

@@ -16,7 +16,8 @@ async def handleClient(ws, path):
 		"facing": 0,
 		"floor": 1,
 		"dead": False,
-		"score": 0
+		"score": 0,
+		"bouldersPicked": 0
 	}
 	playerId += 1
 	print(f"[+] Added player {thisPlayerId}")
