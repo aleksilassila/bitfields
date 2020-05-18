@@ -47,7 +47,11 @@ game = Game({
 	"mineDelay": 2, # Seconds
 	"geyserChange": 15, # 1/15 change
 	"defaultName": "An unnamed bit",
-	"nameMaxLen": 20
+	"nameMaxLen": 20,
+	"doorCost": 1000,
+	"doorHealth": 3,
+	"fortifyCost": 300,
+	"fortifyHealth": 3
 })
 
 loop = asyncio.get_event_loop()

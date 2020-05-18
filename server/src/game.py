@@ -12,6 +12,8 @@ GRASS_ALT_CHAR = "_"
 LADDER_CHAR = "H"
 BUSH_CHAR = "B"
 GEYSIR_CHAR = "M"
+DOOR_CHAR = "D"
+FORTIFIED_CHAR = "▓"
 EMPTY_CHAR = " "
 
 class Game:
@@ -36,6 +38,12 @@ class Game:
 
         self.geysers = {}
         self.geysersIndex = 0
+
+        self.doors = {}
+        self.doorsIndex = 0
+
+        self.fortified = {}
+        self.fortifyIndex = 0
 
         # Game managment
         self.titlesToUpdate = []
@@ -177,8 +185,14 @@ class Game:
             else:
                 raise Exception("No name provided")
 
+            mapToSend = self.map
+            for doorId in self.doors:
+                pos = self.doors[doorId]["position"]
+                floor = self.doors[doorId]["floor"]
+                mapToSend[floor][pos[1]][pos[0]] = "D"
+
             await player["socket"].send(json.dumps({
-                "map": self.map,
+                "map": mapToSend,
                 "tickrate": self.tickrate,
                 "playerId": playerId
             }))
@@ -202,6 +216,12 @@ class Game:
 
                         if "a" in action:
                             self.action(playerId)
+
+                        if "d" in action:
+                            self.placeDoor(playerId)
+
+                        if "f" in action:
+                            self.fortify(playerId)
 
                 else:
                     print(f"[?] Throttled {playerId}")
@@ -238,17 +258,35 @@ class Game:
             if self.players[playerId]["floor"] == floor:
                 playerPositions.append(self.players[playerId]["position"])
 
+        if pos in playerPositions:
+            return PLAYER_CHAR
+
         # Check if geyser is in title
         geyserPositions = []
         for geyserId in self.geysers:
             if self.geysers[geyserId]["floor"] == floor:
                 geyserPositions.append(self.geysers[geyserId]["position"])
 
-        if pos in playerPositions:
-            return PLAYER_CHAR
-
         if pos in geyserPositions:
             return GEYSIR_CHAR
+
+        # Check for doors
+        doorPositions = []
+        for doorId in self.doors:
+            if self.doors[doorId]["floor"] == floor:
+                doorPositions.append(self.doors[doorId]["position"])
+
+        # Check for fortified boulders
+        fortifiedPositions = []
+        for fortifyId in self.fortified:
+            if self.fortified[fortifyId]["floor"] == floor:
+                fortifiedPositions.append(self.fortified[fortifyId]["position"])
+
+        if pos in doorPositions:
+            return DOOR_CHAR
+
+        if pos in fortifiedPositions:
+            return FORTIFIED_CHAR
 
         if char in [LADDER_CHAR, GRASS_CHAR, GRASS_ALT_CHAR, BUSH_CHAR]:
             return char
@@ -284,7 +322,16 @@ class Game:
             if title == LADDER_CHAR:
                 player["floor"] = 0 if player["floor"] == 1 else 1
 
-            if not title in [PLAYER_CHAR, BOULDER_CHAR, WALL_CHAR, GEYSIR_CHAR]:
+            # Check if door is owned by you
+            elif title == DOOR_CHAR:
+                for doorId in self.doors:
+                    if self.doors[doorId]["position"] == pos:
+                        if self.doors[doorId]["ownerId"] != playerId:
+                            return
+                        break
+
+
+            if not title in [PLAYER_CHAR, BOULDER_CHAR, WALL_CHAR, GEYSIR_CHAR, FORTIFIED_CHAR]:
                 player["position"] = pos
 
     def shoot(self, playerId):
@@ -361,6 +408,7 @@ class Game:
         else: player["health"] -= 1
 
         owner["score"] += 100
+        owner["money"] += 100
 
     def createRandomBoulder(self, count):
         for i in range(count):
@@ -383,30 +431,51 @@ class Game:
         self.map[player["floor"]][pos[1]][pos[0]] = BOULDER_CHAR
         self.titlesToUpdate.append((pos[0], pos[1], player["floor"]))
 
-    def mineWall(self, player, pos):
+    def mineWall(self, player, pos, title):
         now = time()
         if now - player["mineTime"] < self.config["mineDelay"]:
             return
 
         player["mineTime"] = now
 
-        if randrange(0, self.config["geyserChange"]) == 0: # 1/15 Change of finding a geyser
-            self.map[player["floor"]][pos[1]][pos[0]] = EMPTY_CHAR
+        if title == WALL_CHAR:
+            if randrange(0, self.config["geyserChange"]) == 0: # 1/15 Change of finding a geyser
+                self.map[player["floor"]][pos[1]][pos[0]] = EMPTY_CHAR
 
-            geyserId = self.geysersIndex
-            self.geysersIndex += 1
+                geyserId = self.geysersIndex
+                self.geysersIndex += 1
 
-            self.geysers[geyserId] = {
-                "lastCollected": time(),
-                "deathTime": time() + 10 * self.config["minute"],
-                "position": pos,
-                "floor": player["floor"]
-            }
+                self.geysers[geyserId] = {
+                    "lastCollected": time(),
+                    "deathTime": time() + 10 * self.config["minute"],
+                    "position": pos,
+                    "floor": player["floor"]
+                }
 
-        else: # Just break the wall
-            self.map[player["floor"]][pos[1]][pos[0]] = BOULDER_CHAR
-            self.titlesToUpdate.append((pos[0], pos[1], player["floor"]))
-        
+            else: # Just break the wall
+                self.map[player["floor"]][pos[1]][pos[0]] = BOULDER_CHAR
+                self.titlesToUpdate.append((pos[0], pos[1], player["floor"]))
+        elif title == DOOR_CHAR:
+            for doorId in self.doors:
+                if pos == self.doors[doorId]["position"]:
+                    door = self.doors[doorId]
+                    door["health"] -= 1
+                    
+                    if door["health"] <= 0:
+                        self.doors.pop(doorId)
+                        self.titlesToUpdate.append((pos[0], pos[1], player["floor"]))
+                    break
+
+        elif title == FORTIFIED_CHAR:
+            for fortifyId in self.fortified:
+                if pos == self.fortified[fortifyId]["position"]:
+                    fortified = self.fortified[fortifyId]
+                    fortified["health"] -= 1
+                    
+                    if fortified["health"] <= 0:
+                        self.fortified.pop(fortifyId)
+                        self.titlesToUpdate.append((pos[0], pos[1], player["floor"]))
+                    break
 
     def action(self, playerId):
         player = self.players[playerId]
@@ -420,8 +489,8 @@ class Game:
             self.place(player, pos)
         elif title == BOULDER_CHAR and player["bouldersPicked"] < 2:
             self.pick(player, pos)
-        elif title == WALL_CHAR:
-            self.mineWall(player, pos)
+        elif title in [WALL_CHAR, DOOR_CHAR, FORTIFIED_CHAR]:
+            self.mineWall(player, pos, title)
         elif title == GEYSIR_CHAR:
             for geyserId in self.geysers:
                 if self.geysers[geyserId]["position"] == pos:
@@ -444,3 +513,49 @@ class Game:
         print(f"Gain: {gain}")
 
         geyser["lastCollected"] = now
+
+    def placeDoor(self, playerId):
+        player = self.players[playerId]
+        pos = self.getNextPos(player["position"], player["facing"])
+        title = self.getTitle(pos, player["floor"])
+
+        if player["money"] < self.config["doorCost"]:
+            return
+
+        if title == EMPTY_CHAR:
+            doorId = self.doorsIndex
+            self.doorsIndex += 1
+
+            self.doors[doorId] = {
+                "position": pos,
+                "floor": player["floor"],
+                "health": self.config["doorHealth"],
+                "ownerId": playerId
+
+            }
+
+            player["money"] -= self.config["doorCost"]
+            self.titlesToUpdate.append((pos[0], pos[1], player["floor"]))
+
+    def fortify(self, playerId):
+        player = self.players[playerId]
+        pos = self.getNextPos(player["position"], player["facing"])
+        title = self.getTitle(pos, player["floor"])
+
+        if player["money"] < self.config["fortifyCost"]:
+            return
+
+        if title == BOULDER_CHAR:
+            self.map[player["floor"]][pos[1]][pos[0]] = EMPTY_CHAR
+
+            fortifyId = self.fortifyIndex
+            self.fortifyIndex += 1
+
+            self.fortified[fortifyId] = {
+                "position": pos,
+                "floor": player["floor"],
+                "health": self.config["fortifyHealth"]
+            }
+
+            player["money"] -= self.config["fortifyCost"]
+            self.titlesToUpdate.append((pos[0], pos[1], player["floor"]))

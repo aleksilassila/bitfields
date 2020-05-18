@@ -1,5 +1,7 @@
 import { useState, useEffect } from "react";
 
+import Button from "../components/Button";
+
 const Home = () => {
     const [name, setName] = useState("");
     const [scores, setScores] = useState({});
@@ -22,13 +24,22 @@ const Home = () => {
             let move = false; // w, d, s, a
             let shoot = false;
             let doAction = false;
+
             let fortify = false;
+            let door = false;
+
             let map = shakeHands();
 
             document
                 .getElementById("fortify-button")
                 .addEventListener("click", () => {
                     fortify = true;
+                });
+
+            document
+                .getElementById("door-button")
+                .addEventListener("click", () => {
+                    door = true;
                 });
 
             const c = document.getElementById("game");
@@ -53,6 +64,11 @@ const Home = () => {
                 if (fortify) {
                     payload.f = true;
                     fortify = false;
+                }
+
+                if (door) {
+                    payload.d = true;
+                    door = false;
                 }
 
                 payload !== {} ? ws.send(JSON.stringify(payload)) : null;
@@ -261,10 +277,9 @@ const Home = () => {
                                 setName(e.target.value);
                         }}
                     />
-                    <input
-                        className="button"
-                        type="button"
+                    <Button
                         value="Play"
+                        id="play-button"
                         onClick={(e) => {
                             connect();
                         }}
@@ -273,11 +288,15 @@ const Home = () => {
             </div>
             <div id="game-container">
                 <div id="toolbar">
-                    <input
-                        className="button"
+                    <Button
                         id="fortify-button"
-                        type="button"
-                        value="Fortify"
+                        className="toolbar-button"
+                        value="Fortify $300"
+                    />
+                    <Button
+                        id="door-button"
+                        className="toolbar-button"
+                        value="Door $1000"
                     />
                 </div>
                 <canvas id="game"></canvas>
@@ -365,24 +384,6 @@ const Home = () => {
                     flex: 1 0 auto;
                 }
 
-                .button {
-                    font-family: "Roboto mono", monospace;
-
-                    border-radius: 2px;
-                    outline: none;
-                    background: none;
-
-                    cursor: pointer;
-
-                    color: lime;
-                    text-shadow: 0 0 3px lime;
-                    border: 2px solid #00ff00;
-                    box-shadow: 0 0 5px 0px lime;
-
-                    padding: 0.5rem 1rem;
-                    margin-left: 1em;
-                }
-
                 #toolbar {
                     display: flex;
                     flex-direction: column;
@@ -390,11 +391,17 @@ const Home = () => {
                     padding: 0.83em 0;
                 }
 
-                #fortify-button {
-                    color: #000000;
-                    text-shadow: 0 0 3px #000;
-                    background-color: lime;
+                #play-button  {
+                    margin-left: 1em;
+                }
+
+                .toolbar-button input {
+                    color: #000000 !important;
+                    text-shadow: 0 0 3px #000 !important;
+                    background-color: lime !important;
                     margin: 0;
+                    margin-bottom: 1em;
+                    width: 100%;
                 }
 
                 #game-container {
