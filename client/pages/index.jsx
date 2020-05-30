@@ -33,12 +33,14 @@ const Home = () => {
             document
                 .getElementById("fortify-button")
                 .addEventListener("click", () => {
+                    document.activeElement.blur();
                     fortify = true;
                 });
 
             document
                 .getElementById("door-button")
                 .addEventListener("click", () => {
+                    document.activeElement.blur();
                     door = true;
                 });
 

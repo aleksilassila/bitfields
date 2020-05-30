@@ -95,6 +95,10 @@ class Generator:
     # Testing
     def test(self, o=1, p=0.5, l=2.0, s=0.3, sc=0.05):
         noiseMap = []
+        
+        def printMap(noiseMap):
+            for line in range(0, len(noiseMap) - 1):
+                print(noiseMap[line])
 
         for y in range(0, self.height):
             noiseMap.append("")
@@ -105,15 +109,13 @@ class Generator:
                 else:
                     noiseMap[y] += " "
 
-        self.printMap(noiseMap)
+        printMap(noiseMap)
 
-    def printMap(self, noiseMap):
-        for line in range(0, len(noiseMap) - 1):
-            print(noiseMap[line])
+if __name__ == "__main__":
+    g = Generator(180, 50, -300)
+    g.test(o=3)
 """
 from MapGeneration.generator import Generator
-g = Generator(240, 80, -300)
-g.test()
 
 For caves
 g.test(s=-0.3, o=2, sc=0.03)
