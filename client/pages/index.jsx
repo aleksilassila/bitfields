@@ -1,11 +1,16 @@
 import { useState, useEffect } from "react";
 
+import Help from "../containers/Help";
 import Button from "../components/Button";
+import RoundButton from "../components/RoundButton";
 
 const Home = () => {
     const [name, setName] = useState("");
     const [scores, setScores] = useState({});
     const [playerId, setPlayerId] = useState(false);
+    const [currentFloor, setCurrentFloor] = useState(1);
+
+    const [showHelp, setShowHelp] = useState(false);
 
     const connect = () => {
         console.log("Connecting...");
@@ -30,19 +35,19 @@ const Home = () => {
 
             let map = shakeHands();
 
-            document
-                .getElementById("fortify-button")
-                .addEventListener("click", () => {
-                    document.activeElement.blur();
-                    fortify = true;
-                });
+            // document
+            //     .getElementById("fortify-button")
+            //     .addEventListener("click", () => {
+            //         document.activeElement.blur();
+            //         fortify = true;
+            //     });
 
-            document
-                .getElementById("door-button")
-                .addEventListener("click", () => {
-                    document.activeElement.blur();
-                    door = true;
-                });
+            // document
+            //     .getElementById("door-button")
+            //     .addEventListener("click", () => {
+            //         document.activeElement.blur();
+            //         door = true;
+            //     });
 
             const c = document.getElementById("game");
             const ctx = c.getContext("2d");
@@ -84,6 +89,7 @@ const Home = () => {
 
                 const action = JSON.parse(m.data);
                 const floor = action.f;
+                setCurrentFloor(floor);
 
                 if ("map" in action) {
                     map = action.map;
@@ -243,6 +249,10 @@ const Home = () => {
                     shoot = true;
                 } else if (e.key.toLowerCase() === "e") {
                     doAction = true;
+                } else if (e.key.toLowerCase() === "f") {
+                    fortify = true;
+                } else if (e.key.toLowerCase() === "g") {
+                    door = true;
                 }
             };
 
@@ -266,6 +276,7 @@ const Home = () => {
 
     return (
         <div className="container">
+            <Help visible={showHelp} setVisible={setShowHelp} />
             <div id="start-game">
                 <h1>Bitfields</h1>
                 <div id="inputs">
@@ -288,8 +299,13 @@ const Home = () => {
                     />
                 </div>
             </div>
+            <RoundButton
+                id="help-button"
+                onClick={() => setShowHelp(true)}
+                value="?"
+            />
             <div id="game-container">
-                <div id="toolbar">
+                {/*                <div id="toolbar">
                     <Button
                         id="fortify-button"
                         className="toolbar-button"
@@ -300,8 +316,38 @@ const Home = () => {
                         className="toolbar-button"
                         value="Door $1000"
                     />
+                </div>*/}
+                <div id="game-wrapper">
+                    <canvas id="game"></canvas>
+                    <div id="toolbar">
+                        <span id="toolbar-score">
+                            Score:{" "}
+                            {scores[playerId] ? scores[playerId].s : null}
+                        </span>
+                        <span id="toolbar-money">
+                            Money:{" "}
+                            {scores[playerId] ? scores[playerId].m : null}
+                        </span>
+                        <span id="toolbar-health">
+                            Health:{" "}
+                            {scores[playerId] ? scores[playerId].h : null}
+                        </span>
+                        {currentFloor ? (
+                            <span id="toolbar-boulders">
+                                Boulders picked:{" "}
+                                {scores[playerId] ? scores[playerId].b : null}
+                            </span>
+                        ) : null}
+                        {currentFloor ? (
+                            <span id="toolbar-position">
+                                Position:{" "}
+                                {scores[playerId]
+                                    ? `${scores[playerId].p[0]}, ${scores[playerId].p[1]}`
+                                    : null}
+                            </span>
+                        ) : null}
+                    </div>
                 </div>
-                <canvas id="game"></canvas>
                 <div id="highscores">
                     <h2>Leaderboard</h2>
                     <ul>
@@ -315,13 +361,13 @@ const Home = () => {
                             }
                         })}
                     </ul>
-                    <h2>Your stats</h2>
+                    {/*                    <h2>Your stats</h2>
                     {scores[playerId] ? (
                         <ul>
                             <li>Score: {scores[playerId].s}</li>
                             <li>Money: {scores[playerId].m}</li>
                         </ul>
-                    ) : null}
+                    ) : null}*/}
                 </div>
             </div>
             <link
@@ -343,6 +389,10 @@ const Home = () => {
                     font-family: "Roboto mono", monospace;
                     color: lime;
                     text-shadow: 0px 0px 3px lime;
+                }
+
+                html {
+                    background-color: #020303;
                 }
 
                 .container {
@@ -386,11 +436,29 @@ const Home = () => {
                     flex: 1 0 auto;
                 }
 
-                #toolbar {
+                 {
+                    /*                #toolbar {
                     display: flex;
                     flex-direction: column;
                     margin-right: 2em;
                     padding: 0.83em 0;
+                }*/
+                }
+
+                #toolbar {
+                    display: flex;
+                    flex-direction: row;
+                    font-size: 10px;
+                }
+
+                #toolbar-money,
+                #toolbar-boulders,
+                #toolbar-health {
+                    margin-left: 1em;
+                }
+
+                #toolbar-position {
+                    margin-left: auto;
                 }
 
                 #play-button  {
@@ -412,6 +480,13 @@ const Home = () => {
 
                 #highscores  {
                     margin-left: 2em;
+                    min-width: 300px;
+                }
+
+                #help-button {
+                    position: absolute;
+                    top: 1em;
+                    right: 1em;
                 }
 
                 ul {
@@ -422,6 +497,10 @@ const Home = () => {
                 ::placeholder {
                     color: lime;
                     opacity: 0.4;
+                }
+
+                button {
+                    cursor: pointer;
                 }
             `}</style>
         </div>

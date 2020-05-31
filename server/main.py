@@ -12,7 +12,7 @@ async def handleClient(ws, path):
 	global playerId
 	thisPlayerId = playerId
 
-	game.players[thisPlayerId] = Player(thisPlayerId, ws, game.getSpawnPosition(), Config.defaultName, money = 5000)
+	game.players[thisPlayerId] = Player(thisPlayerId, ws, game.getSpawnPosition(), Config.defaultName)
 
 	playerId += 1
 	print(f"[+] Added player {thisPlayerId}")

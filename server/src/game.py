@@ -144,7 +144,10 @@ class Game:
             stats[playerId] = {
                 "n": self.players[playerId].name,
                 "s": self.players[playerId].score,
-                "m": self.players[playerId].money
+                "m": self.players[playerId].money,
+                "b": self.players[playerId].bouldersPicked,
+                "h": self.players[playerId].health,
+                "p": self.players[playerId].position
             }
 
         for playerId in self.players:
