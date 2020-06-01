@@ -278,7 +278,7 @@ const Home = () => {
         <div className="container">
             <Help visible={showHelp} setVisible={setShowHelp} />
             <div id="start-game">
-                <h1>Bitfields</h1>
+                <h1 id="title">Bitfields</h1>
                 <div id="inputs">
                     <input
                         id="name-field"
@@ -320,30 +320,42 @@ const Home = () => {
                 <div id="game-wrapper">
                     <canvas id="game"></canvas>
                     <div id="toolbar">
-                        <span id="toolbar-score">
-                            Score:{" "}
-                            {scores[playerId] ? scores[playerId].s : null}
+                        <span id="toolbar-name">
+                            Name:{" "}
+                            <span className="stats-color">
+                                {scores[playerId] ? scores[playerId].n : null}
+                            </span>
                         </span>
+                        {currentFloor ? (
+                            <span id="toolbar-score">
+                                Score:{" "}
+                                <span className="stats-color">
+                                    {scores[playerId]
+                                        ? scores[playerId].s
+                                        : null}
+                                </span>
+                            </span>
+                        ) : null}
                         <span id="toolbar-money">
                             Money:{" "}
-                            {scores[playerId] ? scores[playerId].m : null}
+                            <span className="stats-color">
+                                {scores[playerId] ? scores[playerId].m : null}
+                            </span>
                         </span>
                         <span id="toolbar-health">
                             Health:{" "}
-                            {scores[playerId] ? scores[playerId].h : null}
-                        </span>
-                        {currentFloor ? (
-                            <span id="toolbar-boulders">
-                                Boulders picked:{" "}
-                                {scores[playerId] ? scores[playerId].b : null}
+                            <span className="stats-color">
+                                {scores[playerId] ? scores[playerId].h : null}
                             </span>
-                        ) : null}
+                        </span>
                         {currentFloor ? (
                             <span id="toolbar-position">
                                 Position:{" "}
-                                {scores[playerId]
-                                    ? `${scores[playerId].p[0]}, ${scores[playerId].p[1]}`
-                                    : null}
+                                <span className="stats-color">
+                                    {scores[playerId]
+                                        ? `${scores[playerId].p[0]}, ${scores[playerId].p[1]}`
+                                        : null}
+                                </span>
                             </span>
                         ) : null}
                     </div>
@@ -414,11 +426,12 @@ const Home = () => {
                     font-size: 4em;
                     margin: 0;
                     text-align: center;
-                    margin-bottom: 1em;
+                    margin-bottom: 0.2em;
                 }
 
                 #inputs  {
                     display: flex;
+                    justify-content: center;
                 }
 
                 #name-field {
@@ -429,6 +442,8 @@ const Home = () => {
                     text-shadow: 0 0 3px lime;
                     padding: 0.5rem 1rem;
                     background: none;
+
+                    max-width: 200px;
 
                     border: 2px solid #00ff00;
                     box-shadow: 0 0 5px 0px lime;
@@ -451,10 +466,11 @@ const Home = () => {
                     font-size: 10px;
                 }
 
+                #toolbar-name,
+                #toolbar-score,
                 #toolbar-money,
-                #toolbar-boulders,
                 #toolbar-health {
-                    margin-left: 1em;
+                    margin-right: 1em;
                 }
 
                 #toolbar-position {
@@ -497,6 +513,11 @@ const Home = () => {
                 ::placeholder {
                     color: lime;
                     opacity: 0.4;
+                }
+
+                .stats-color {
+                    color: mediumspringgreen;
+                    text-shadow: 0px 0px 3px mediumspringgreen;
                 }
 
                 button {
