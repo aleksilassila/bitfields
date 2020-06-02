@@ -135,12 +135,14 @@ const Home = () => {
                 for (let key in action.g) {
                     const pos = action.g[key].p;
 
-                    if (action.g[key].s === 2) {
-                        mapToPrint[pos[1]][pos[0]] = "2";
-                    } else if (action.g[key].s === 1) {
-                        mapToPrint[pos[1]][pos[0]] = "1";
-                    } else {
-                        mapToPrint[pos[1]][pos[0]] = "0";
+                    if (action.g[key].f === floor) {
+                        if (action.g[key].s === 2) {
+                            mapToPrint[pos[1]][pos[0]] = "2";
+                        } else if (action.g[key].s === 1) {
+                            mapToPrint[pos[1]][pos[0]] = "1";
+                        } else {
+                            mapToPrint[pos[1]][pos[0]] = "0";
+                        }
                     }
                 }
 
