@@ -16,15 +16,9 @@ const Home = () => {
         console.log("Connecting...");
         const ws = new WebSocket("ws://" + window.location.hostname + ":8765");
 
-        const shakeHands = () => {
-            ws.send(JSON.stringify({ name }));
-        };
-
         const startGame = () => {
             document.getElementById("start-game").style.display = "none";
             document.getElementById("game-container").style.display = "flex";
-
-            shakeHands();
 
             let move = false; // w, d, s, a
             let shoot = false;
@@ -33,7 +27,7 @@ const Home = () => {
             let fortify = false;
             let door = false;
 
-            let map = shakeHands();
+            let map;
 
             // document
             //     .getElementById("fortify-button")
@@ -51,6 +45,11 @@ const Home = () => {
 
             const c = document.getElementById("game");
             const ctx = c.getContext("2d");
+
+            const shakeHands = (data) => {
+                setPlayerId(data.playerId);
+                map = data.map;
+            };
 
             const sendData = () => {
                 const payload = {};
@@ -81,9 +80,32 @@ const Home = () => {
                 payload !== {} ? ws.send(JSON.stringify(payload)) : null;
             };
 
+            const doAnimation = async (data) => {
+                const animation = data.a;
+                const pos = data.p;
+                const floor = data.f;
+
+                const character = map[floor][pos[1]][pos[0]];
+
+                // If animation is blink
+                if (animation === "b") {
+                    map[floor][pos[1]][pos[0]] = " ";
+                    await new Promise((r) => setTimeout(r, 200));
+                    map[floor][pos[1]][pos[0]] = character;
+                }
+            };
+
+            // Begin the handshake
+            ws.send(JSON.stringify({ name }));
+
             ws.onmessage = (m) => {
                 if (m.data[0] === "s") {
                     setScores(JSON.parse(m.data.substr(1)));
+                    return;
+                }
+
+                if (m.data[0] === "a") {
+                    doAnimation(JSON.parse(m.data.substr(1)));
                     return;
                 }
 
@@ -91,9 +113,8 @@ const Home = () => {
                 const floor = action.f;
                 setCurrentFloor(floor);
 
-                if ("map" in action) {
-                    map = action.map;
-                    setPlayerId(action.playerId);
+                if (map === undefined && "map" in action) {
+                    shakeHands(action);
                     return;
                 }
 
@@ -112,16 +133,14 @@ const Home = () => {
 
                 // Render geysers
                 for (let key in action.g) {
-                    for (let key in action.g) {
-                        const pos = action.g[key].p;
+                    const pos = action.g[key].p;
 
-                        if (action.g[key].s === 2) {
-                            mapToPrint[pos[1]][pos[0]] = "2";
-                        } else if (action.g[key].s === 1) {
-                            mapToPrint[pos[1]][pos[0]] = "1";
-                        } else {
-                            mapToPrint[pos[1]][pos[0]] = "0";
-                        }
+                    if (action.g[key].s === 2) {
+                        mapToPrint[pos[1]][pos[0]] = "2";
+                    } else if (action.g[key].s === 1) {
+                        mapToPrint[pos[1]][pos[0]] = "1";
+                    } else {
+                        mapToPrint[pos[1]][pos[0]] = "0";
                     }
                 }
 

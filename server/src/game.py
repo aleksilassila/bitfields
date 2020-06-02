@@ -159,6 +159,25 @@ class Game:
                 print(f"[-] Dead connection for {playerId}")
                 self.deadConnections.append(playerId)
 
+    async def sendAnimation(self, animation, pos, floor):
+        payload = {
+            "a": animation,
+            "p": pos,
+            "f": floor
+        }
+
+        print(f"Sent animation {pos} {floor}")
+
+        for playerId in self.players:
+            try:
+                await self.players[playerId].socket.send("a" + json.dumps(payload))
+
+            
+            except Exception as e:
+                if self.logging: print(e)
+                print(f"[-] Dead connection for {playerId}")
+                self.deadConnections.append(playerId)
+
     def removeDeadConnections(self):
         for playerId in self.deadConnections:
             try:
@@ -187,6 +206,7 @@ class Game:
                 raise Exception("No name provided")
 
             mapToSend = self.map
+
             for doorId in self.doors:
                 pos = self.doors[doorId].position
                 floor = self.doors[doorId].floor
@@ -222,7 +242,7 @@ class Game:
                             self.shoot(playerId)
 
                         if "a" in action:
-                            self.action(playerId)
+                            await self.action(playerId)
 
                         if "d" in action:
                             self.placeDoor(playerId)
@@ -433,7 +453,7 @@ class Game:
         self.map[player.floor][pos[1]][pos[0]] = BOULDER_CHAR
         self.titlesToUpdate.append((pos[0], pos[1], player.floor))
 
-    def mineWall(self, player, pos, title):
+    async def mineWall(self, player, pos, title):
         now = time()
         if now - player.mineTime < Config.mineDelay:
             return
@@ -461,6 +481,9 @@ class Game:
                     if door.health <= 0:
                         self.doors.pop(doorId)
                         self.titlesToUpdate.append((pos[0], pos[1], player.floor))
+                    else:
+                        await self.sendAnimation("b", pos, player.floor)
+
                     break
 
         elif title == FORTIFIED_CHAR:
@@ -472,9 +495,12 @@ class Game:
                     if fortified.health <= 0:
                         self.fortified.pop(fortifyId)
                         self.titlesToUpdate.append((pos[0], pos[1], player.floor))
+                    else:
+                        await self.sendAnimation("b", pos, player.floor)
+
                     break
 
-    def action(self, playerId):
+    async def action(self, playerId):
         player = self.players[playerId]
         pos = self.getNextPos(player.position, player.facing)
         title = self.getTitle(pos, player.floor)
@@ -487,7 +513,7 @@ class Game:
         elif title == BOULDER_CHAR and player.bouldersPicked < 2:
             self.pick(player, pos)
         elif title in [WALL_CHAR, DOOR_CHAR, FORTIFIED_CHAR]:
-            self.mineWall(player, pos, title)
+            await self.mineWall(player, pos, title)
         elif title == GEYSIR_CHAR:
             for geyserId in self.geysers:
                 if self.geysers[geyserId].position == pos:
