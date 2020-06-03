@@ -7,6 +7,7 @@ from src.config import Config
 from src.generator import Generator
 from src.bullet import Bullet
 from src.gameStructures import Door, Fortified, Geyser
+from src.ai import Bot
 
 PLAYER_CHAR = "@"
 WALL_CHAR = "#"
@@ -30,6 +31,7 @@ class Game:
 
         # Game logic
         self.players = {}
+        self.bots = {}
 
         self.bullets = {}
         self.bulletsIndex = 0
@@ -67,6 +69,10 @@ class Game:
                 await self.updateStats()
                 self.revivePlayers()
 
+            if tickCount % 2 == 0:
+                for bot in self.bots:
+                    self.bots[bot].move()
+
             self.updateBullets()
             await self.updatePlayers()
             await asyncio.sleep(1/Config.tickrate)
@@ -74,6 +80,8 @@ class Game:
             if len(self.deadConnections) > 0:
                 self.removeDeadConnections()
 
+        # Create test bot
+        self.bots[0] = Bot(self, self.getSpawnPosition(), 1)
 
         tickCount = 1
         while True:
@@ -85,6 +93,7 @@ class Game:
 
     async def updatePlayers(self, scores = False):
         players = {}
+        bots = {}
         bullets = {}
         updates = []
         geysers = {}
@@ -120,10 +129,18 @@ class Game:
             updates.append({ "p": pos, "c": self.getTitle((pos[0], pos[1]), pos[2]) })
         self.titlesToUpdate = []
 
+        # Bots
+        for botId in self.bots:
+            bots[botId] = {
+                "p": self.bots[botId].pos,
+                "f": self.bots[botId].floor
+            }
+
         for playerId in self.players:
             try:
                 await self.players[playerId].socket.send(json.dumps({
                     "p": players, # Player positions
+                    "n": bots, # NPC positions
                     "i": playerId, # Self playerid
                     "f": self.players[playerId].floor, # Floor
                     "b": bullets, # Bullets

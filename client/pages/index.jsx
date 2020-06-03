@@ -158,6 +158,17 @@ const Home = () => {
                     }
                 }
 
+                // Render bots
+                for (let key in action.n) {
+                    if (
+                        action.n[key].p[0] !== null &&
+                        action.n[key].f === action.f
+                    ) {
+                        const pos = action.n[key].p;
+                        mapToPrint[pos[1]][pos[0]] = "B";
+                    }
+                }
+
                 // Bullets
                 if (action.b && !(action.b === {})) {
                     for (let key in action.b) {
@@ -223,7 +234,11 @@ const Home = () => {
                         if (character === "&") {
                             ctx.fillStyle = "white";
                             ctx.shadowColor = "white";
-                        } else if (character === "@" || character === "•") {
+                        } else if (
+                            character === "@" ||
+                            character === "•" ||
+                            character === "B"
+                        ) {
                             ctx.fillStyle = "red";
                             ctx.shadowColor = "red";
                         } else if (character === "_" || character === ".") {

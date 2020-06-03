@@ -14,3 +14,5 @@ class Config:
 	doorHealth = 3
 	fortifyCost = 300
 	fortifyHealth = 3
+
+	botRandomTurnChange = 20
