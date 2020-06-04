@@ -14,7 +14,11 @@ const Home = () => {
 
     const connect = () => {
         console.log("Connecting...");
-        const ws = new WebSocket("ws://" + window.location.hostname + ":8765");
+        const ws = new WebSocket(
+            "ws://" +
+                window.location.hostname +
+                (process.env.NODE_ENV === "production" ? "/api" : ":8765")
+        );
 
         const startGame = () => {
             document.getElementById("start-game").style.display = "none";
