@@ -1,5 +1,5 @@
 from time import time
-from src.config import Config
+from config import Config
 
 class Geyser:
 	def __init__(self, geyserId, position, floor):

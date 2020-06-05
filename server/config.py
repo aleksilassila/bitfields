@@ -1,9 +1,11 @@
 class Config:
-	logging = True
-	tickrate = 15
-	ticksForgiven = 5
+	mapDimensions = (61, 100) # Min 61*39
 	defaultName = "An unnamed bit"
 	nameMaxLen = 20
+
+	logging = True
+	tickrate = 4
+	ticksForgiven = 5
 
 	minute = 60 # Make 30 to make game run 2x faster
 	shootDelay = 0.2 # Seconds
@@ -16,3 +18,5 @@ class Config:
 	fortifyHealth = 3
 
 	botRandomTurnChange = 20
+	botSniffRange = 10
+	botAmount = 45*61 # 1 bot per area defined here

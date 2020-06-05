@@ -3,7 +3,7 @@ import json
 from random import randrange
 from time import time
 
-from src.config import Config
+from config import Config
 from src.generator import Generator
 from src.bullet import Bullet
 from src.gameStructures import Door, Fortified, Geyser
@@ -26,7 +26,6 @@ FULL_SOLID = [WALL_CHAR, BOULDER_CHAR, FORTIFIED_CHAR, DOOR_CHAR]
 
 class Game:
     def __init__(self):
-
         self.logging = True
 
         # Game logic
@@ -48,7 +47,7 @@ class Game:
         # Game managment
         self.titlesToUpdate = []
         self.deadConnections = []
-        self.mapDimensions = (61, 45)
+        self.mapDimensions = Config.mapDimensions
         gen = Generator(self.mapDimensions[0], self.mapDimensions[1], -200)
 
         self.map = [gen.getUnderworld(), gen.getOverworld()]
@@ -61,6 +60,11 @@ class Game:
                 bouldery = boulder[1]
                 self.map[floor][bouldery][boulderx] = BOULDER_CHAR
 
+        # Create initial bots
+        totalPlayArea = Config.mapDimensions[0] * Config.mapDimensions[1]
+        for botId in range(0, round(totalPlayArea/Config.botAmount)):
+            self.bots[botId] = Bot(self, self.getSpawnPosition(), 1)
+
 
     ## NETWORKING AND GAME MANAGMENT
     async def start(self):
@@ -69,19 +73,16 @@ class Game:
                 await self.updateStats()
                 self.revivePlayers()
 
-            if tickCount % 2 == 0:
-                for bot in self.bots:
-                    self.bots[bot].move()
-
             self.updateBullets()
-            await self.updatePlayers()
-            await asyncio.sleep(1/Config.tickrate)
+
+            for bot in self.bots:
+                self.bots[bot].move()
 
             if len(self.deadConnections) > 0:
                 self.removeDeadConnections()
 
-        # Create test bot
-        self.bots[0] = Bot(self, self.getSpawnPosition(), 1)
+            await self.updatePlayers()
+            await asyncio.sleep(1/Config.tickrate)
 
         tickCount = 1
         while True:
@@ -349,10 +350,10 @@ class Game:
 
         return nextPos
 
-    def getSpawnPosition(self):
+    def getSpawnPosition(self, floor = 1):
         while True:
             pos = (randrange(self.mapDimensions[0]), randrange(self.mapDimensions[1]))
-            if self.getTitle(pos, 1) not in [PLAYER_CHAR, BOULDER_CHAR, WALL_CHAR]:
+            if self.getTitle(pos, floor = floor) not in [PLAYER_CHAR, BOULDER_CHAR, WALL_CHAR, DOOR_CHAR, FORTIFIED_CHAR, GEYSIR_CHAR, LADDER_CHAR]:
                 return pos
 
     def movePlayer(self, playerId, direction):
@@ -374,6 +375,9 @@ class Game:
                             return
                         break
 
+            for botId in self.bots:
+                if self.bots[botId].pos == pos:
+                    self.kill(playerId, False)
 
             if not title in [PLAYER_CHAR, BOULDER_CHAR, WALL_CHAR, GEYSIR_CHAR, FORTIFIED_CHAR]:
                 player.position = pos
@@ -412,20 +416,28 @@ class Game:
             bullet = self.bullets[bulletKey]
             pos = self.getNextPos(bullet.position, bullet.direction)
 
+            title = self.getTitle(pos, bullet.floor)
+
             # Check if bullet is in playarea
             if self.mapDimensions[0] - 1 < pos[0] or pos[0] < 0 or self.mapDimensions[1] - 1 < pos[1] or pos[1] < 0:
                 toRemove.append(bulletKey)
 
             # Check for collisions
-            elif self.getTitle(pos, bullet.floor) in FULL_SOLID:
+            elif title in FULL_SOLID:
                 toRemove.append(bulletKey)
 
             # Check for kills
-            else:
+            elif title == PLAYER_CHAR:
                 for playerKey in self.players:
                     if self.players[playerKey].position == pos and bullet.floor == self.players[playerKey].floor:
                         toRemove.append(bulletKey)
                         self.kill(playerKey, bullet.owner)
+
+            else:
+                for botId in self.bots:
+                    if self.bots[botId].pos == pos and bullet.floor == self.bots[botId].floor:
+                        toRemove.append(bulletKey)
+                        self.kill(botId, bullet.owner, botKilled = True)
 
             bullet.position = pos
 
@@ -436,18 +448,28 @@ class Game:
             except:
                 pass
 
-    def kill(self, playerId, ownerId):
-        player = self.players[playerId]
-        owner = self.players[ownerId]
+    def kill(self, killedId, killerId, botKilled = False):
+        if botKilled:
+            self.bots[killedId].pos = self.getSpawnPosition(floor = self.bots[killedId].floor)
+            self.players[killerId].score += 50
+            self.players[killerId].money += 15
+            return
 
-        if player.health < 2:
-            player.dead = True
-            player.position = (None, None)
-            player.floor = 1
-        else: player.health -= 1
+        killed = self.players[killedId]
+        owner = self.players[killerId] if killerId != False else False 
 
-        owner.score += 100
-        owner.money += 100
+        if killed.health < 2:
+            killed.dead = True
+            killed.position = (None, None)
+            killed.floor = 1
+
+        else: killed.health -= 1
+
+        if owner:
+            owner.score += 100
+            owner.money += 50
+        
+        killed.money = killed.money - (35 if killerId else 10)
 
     def createRandomBoulder(self, count):
         for i in range(count):
