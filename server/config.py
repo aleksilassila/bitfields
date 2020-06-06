@@ -6,6 +6,7 @@ class Config:
 	logging = True
 	tickrate = 4
 	ticksForgiven = 5
+	chunksize = (80, 50)
 
 	minute = 60 # Make 30 to make game run 2x faster
 	shootDelay = 0.2 # Seconds

@@ -31,11 +31,13 @@ class Game:
         # Game logic
         self.players = {}
         self.bots = {}
+        self.botsInactive = {}
 
         self.bullets = {}
         self.bulletsIndex = 0
 
         self.geysers = {}
+        self.geysersInactive = {}
         self.geysersIndex = 0
 
         self.doors = {}
@@ -43,6 +45,9 @@ class Game:
 
         self.fortified = {}
         self.fortifyIndex = 0
+
+        self.moveToInactive = {}
+        self.activeChunks = []
 
         # Game managment
         self.titlesToUpdate = []
@@ -69,9 +74,27 @@ class Game:
     ## NETWORKING AND GAME MANAGMENT
     async def start(self):
         async def tick():
-            if tickCount % Config.tickrate == 0: # Every around second
+            if tickCount % 2 * Config.tickrate == 0: # Every around 2 seconds
                 await self.updateStats()
                 self.revivePlayers()
+
+            for playerId in self.players:
+                player = self.players[playerId]
+
+                if "m" in player.queue:
+                    self.movePlayer(playerId, player.facing)
+
+                if "s" in player.queue:
+                    self.shoot(playerId)
+
+                if "a" in player.queue:
+                    await self.action(playerId)
+
+                if "d" in player.queue:
+                    self.placeDoor(playerId)
+
+                if "f" in player.queue:
+                    self.fortify(playerId)
 
             self.updateBullets()
 
@@ -246,30 +269,25 @@ class Game:
                 data = await player.socket.recv()
                 
                 action = json.loads(data)
+                player.queue = {}
 
-                # Check for speedhacks
-                if time() - player.recvTime > (1/(Config.tickrate + Config.ticksForgiven)):
-                    player.recvTime = time()
-                    if not player.dead:
+                if not player.dead:
 
-                        if "m" in action:
-                            player.facing = action["m"]
-                            self.movePlayer(playerId, action["m"])
+                    if "m" in action:
+                        player.facing = action["m"]
+                        player.queue["m"] = action["m"]
 
-                        if "s" in action:
-                            self.shoot(playerId)
+                    if "s" in action:
+                        player.queue["s"] = 1
 
-                        if "a" in action:
-                            await self.action(playerId)
+                    if "a" in action:
+                        player.queue["a"] = 1
 
-                        if "d" in action:
-                            self.placeDoor(playerId)
+                    if "d" in action:
+                        player.queue["d"] = 1
 
-                        if "f" in action:
-                            self.fortify(playerId)
-
-                else:
-                    print(f"[?] Throttled {playerId}")
+                    if "f" in action:
+                        player.queue["f"] = 1
                 
         except Exception as e:
             if self.logging: print(e)
@@ -350,6 +368,9 @@ class Game:
 
         return nextPos
 
+    def getChunk(self, pos):
+        return (floor(pos[0] / Config.chunkSize[0]), floor(pos[1] / Config.chunkSize[1]))
+
     def getSpawnPosition(self, floor = 1):
         while True:
             pos = (randrange(self.mapDimensions[0]), randrange(self.mapDimensions[1]))
@@ -375,12 +396,14 @@ class Game:
                             return
                         break
 
+            # Check if killed by bot
             for botId in self.bots:
                 if self.bots[botId].pos == pos:
                     self.kill(playerId, False)
 
             if not title in [PLAYER_CHAR, BOULDER_CHAR, WALL_CHAR, GEYSIR_CHAR, FORTIFIED_CHAR]:
                 player.position = pos
+                # self.activeChunks.extend()
 
     def shoot(self, playerId):
         index = self.bulletsIndex

@@ -19,6 +19,7 @@ class Player:
 		self.facing = 0
 		self.bouldersPicked = 0
 
-		self.recvTime = now
 		self.shootTime = now
 		self.mineTime = now
+
+		self.queue = {} 
