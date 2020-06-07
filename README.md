@@ -31,8 +31,6 @@ Live demo upcoming later...
 ## To Do
 
 -   Spawn points
--   _Chunks and NPCs_
 -   Reduce amount of loops: make more efficient
--   Action queue: better "anticheat"
 -   Teams?
 -   Place ladders?

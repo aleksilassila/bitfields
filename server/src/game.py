@@ -75,12 +75,13 @@ class Game:
         async def tick():
             nonlocal lastChunks
 
-            if tickCount % 2 * Config.tickrate == 0: # Every around 2 seconds
+            if tickCount % (2 * Config.tickrate) == 0: # Every around 2 seconds
                 await self.updateStats()
                 self.revivePlayers()
 
             chunksActivated = []
             chunks = []
+
             # Player loop
             for playerId in self.players:
                 player = self.players[playerId]
@@ -114,16 +115,17 @@ class Game:
             for botId in dict(self.botsInactive):
                 if self.botsInactive[botId].chunk in chunksActivated:
                     self.bots[botId] = self.botsInactive.pop(botId)
-                    print(f"Active bot: {botId}")
+                    if Config.logging: print(f"[G] Active bot: {botId}")
 
             # Disable bots
             for botId in dict(self.bots):
                 if not self.bots[botId].chunk in chunks:
                     self.botsInactive[botId] = self.bots.pop(botId)
-                    print(f"Disabled bot: {botId}")
+                    if Config.logging: print(f"[G] Disabled bot: {botId}")
 
             self.updateBullets()
 
+            # Bot loop
             for bot in self.bots:
                 self.bots[bot].move()
 
@@ -134,11 +136,12 @@ class Game:
             await asyncio.sleep(1/Config.tickrate)
 
         tickCount = 1
+        print("Server started.")
         while True:
             lastChunks = []
             await tick()
 
-            if tickCount >= Config.tickrate:
+            if tickCount >= Config.tickrate * 2:
                 tickCount = 1
             else: tickCount += 1
 
@@ -427,7 +430,6 @@ class Game:
         lastChunkX = ceil(Config.mapDimensions[0] / Config.chunkSize) - 1
         lastChunkY = ceil(Config.mapDimensions[1] / Config.chunkSize) - 1
 
-        print(topLeftCorner)
         for y in range(maxAmountOfChunksY):
             for x in range(maxAmountOfChunksX):
                 chunk = self.getChunk((topLeftCorner[0] + x * Config.chunkSize, topLeftCorner[1] + y * Config.chunkSize))
