@@ -2,6 +2,8 @@ import asyncio
 import json
 from random import randrange
 from time import time
+from math import floor, ceil
+from collections import Counter
 
 from config import Config
 from src.generator import Generator
@@ -46,9 +48,6 @@ class Game:
         self.fortified = {}
         self.fortifyIndex = 0
 
-        self.moveToInactive = {}
-        self.activeChunks = []
-
         # Game managment
         self.titlesToUpdate = []
         self.deadConnections = []
@@ -74,13 +73,19 @@ class Game:
     ## NETWORKING AND GAME MANAGMENT
     async def start(self):
         async def tick():
+            nonlocal lastChunks
+
             if tickCount % 2 * Config.tickrate == 0: # Every around 2 seconds
                 await self.updateStats()
                 self.revivePlayers()
 
+            chunksActivated = []
+            chunks = []
+            # Player loop
             for playerId in self.players:
                 player = self.players[playerId]
 
+                # Do actions
                 if "m" in player.queue:
                     self.movePlayer(playerId, player.facing)
 
@@ -96,6 +101,27 @@ class Game:
                 if "f" in player.queue:
                     self.fortify(playerId)
 
+                # Create chunk map of activated
+                for chunk in player.chunks:
+                    if not chunk in lastChunks:
+                        chunksActivated.append(chunk)
+
+                    chunks.append(chunk)
+
+                lastChunks = chunks
+
+            # Active bots
+            for botId in dict(self.botsInactive):
+                if self.botsInactive[botId].chunk in chunksActivated:
+                    self.bots[botId] = self.botsInactive.pop(botId)
+                    print(f"Active bot: {botId}")
+
+            # Disable bots
+            for botId in dict(self.bots):
+                if not self.bots[botId].chunk in chunks:
+                    self.botsInactive[botId] = self.bots.pop(botId)
+                    print(f"Disabled bot: {botId}")
+
             self.updateBullets()
 
             for bot in self.bots:
@@ -109,6 +135,7 @@ class Game:
 
         tickCount = 1
         while True:
+            lastChunks = []
             await tick()
 
             if tickCount >= Config.tickrate:
@@ -258,12 +285,13 @@ class Game:
                 floor = self.fortified[fortifyId].floor
                 mapToSend[floor][pos[1]][pos[0]] = FORTIFIED_CHAR
 
-
             await player.socket.send(json.dumps({
                 "map": mapToSend,
                 "tickrate": Config.tickrate,
                 "playerId": playerId
             }))
+
+            player.chunks = self.getChunksAround(player.position)
 
             while True:
                 data = await player.socket.recv()
@@ -300,6 +328,7 @@ class Game:
 
             if player.dead:
                 player.position = self.getSpawnPosition()
+                player.chunks = self.getChunksAround(player.position)
                 player.dead = False
 
 
@@ -368,8 +397,44 @@ class Game:
 
         return nextPos
 
-    def getChunk(self, pos):
-        return (floor(pos[0] / Config.chunkSize[0]), floor(pos[1] / Config.chunkSize[1]))
+    def getChunk(self, pos, axis = None):
+        if axis == "x":
+            return floor(pos[0] / Config.chunkSize)
+
+        elif axis == "y":
+            return floor(pos[1] / Config.chunkSize)
+
+        return (floor(pos[0] / Config.chunkSize), floor(pos[1] / Config.chunkSize))
+
+    def getChunksAround(self, pos):
+        output = []
+
+        topLeftCorner = [
+            pos[0] - floor(Config.clientDimensions[0]/2),
+            pos[1] - floor(Config.clientDimensions[1]/2)
+        ]
+
+        if topLeftCorner[0] < 0: topLeftCorner[0] = 0
+        if topLeftCorner[1] < 0: topLeftCorner[1] = 0
+        if topLeftCorner[0] + Config.clientDimensions[0] >= Config.mapDimensions[0]:
+            topLeftCorner[0] = Config.mapDimensions[0] - Config.clientDimensions[0]
+        if topLeftCorner[1] + Config.clientDimensions[1] >= Config.mapDimensions[1]:
+            topLeftCorner[1] = Config.mapDimensions[1] - Config.clientDimensions[1]
+
+        maxAmountOfChunksX = ceil(Config.clientDimensions[0] / Config.chunkSize)
+        maxAmountOfChunksY = ceil(Config.clientDimensions[1] / Config.chunkSize)
+
+        lastChunkX = ceil(Config.mapDimensions[0] / Config.chunkSize) - 1
+        lastChunkY = ceil(Config.mapDimensions[1] / Config.chunkSize) - 1
+
+        print(topLeftCorner)
+        for y in range(maxAmountOfChunksY):
+            for x in range(maxAmountOfChunksX):
+                chunk = self.getChunk((topLeftCorner[0] + x * Config.chunkSize, topLeftCorner[1] + y * Config.chunkSize))
+                if not (chunk[0] < 0 or chunk[1] < 0 or chunk[0] > lastChunkX or chunk[1] > lastChunkY): 
+                    output.append(chunk)
+
+        return output
 
     def getSpawnPosition(self, floor = 1):
         while True:
@@ -403,7 +468,9 @@ class Game:
 
             if not title in [PLAYER_CHAR, BOULDER_CHAR, WALL_CHAR, GEYSIR_CHAR, FORTIFIED_CHAR]:
                 player.position = pos
-                # self.activeChunks.extend()
+
+                # if pos[0] % Config.chunkSize == 0 or pos[1] % Config.chunkSize == 0:
+                player.chunks = self.getChunksAround(pos)
 
     def shoot(self, playerId):
         index = self.bulletsIndex

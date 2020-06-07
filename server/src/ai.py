@@ -20,6 +20,7 @@ class Bot:
 		self.game = game
 
 		self.pos = pos
+		self.chunk = game.getChunk(self.pos)
 		self.floor = floor
 		self.zombieToDir = 0
 
@@ -32,6 +33,7 @@ class Bot:
 		else:
 			self.moveForPlayer()
 		self.sniffPlayers()
+		self.chunk = self.game.getChunk(self.pos)
 		
 
 	def moveForPlayer(self):

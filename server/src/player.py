@@ -23,3 +23,4 @@ class Player:
 		self.mineTime = now
 
 		self.queue = {} 
+		self.chunks = []
