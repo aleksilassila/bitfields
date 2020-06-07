@@ -464,8 +464,9 @@ class Game:
 
     def getSpawnPosition(self, floor = 1):
         while True:
-            pos = (randrange(self.mapDimensions[0]), randrange(self.mapDimensions[1]))
-            if self.getTitle(pos, floor = floor) not in [PLAYER_CHAR, BOULDER_CHAR, WALL_CHAR, DOOR_CHAR, FORTIFIED_CHAR, GEYSIR_CHAR, LADDER_CHAR]:
+            pos = (randrange(4, self.mapDimensions[0] - 4), randrange(4, self.mapDimensions[1] - 4))
+            
+            if self.getTitle(pos, floor = floor) in [EMPTY_CHAR, GRASS_CHAR, GRASS_ALT_CHAR]:
                 return pos
 
     def movePlayer(self, playerId, direction):
