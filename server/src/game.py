@@ -75,6 +75,8 @@ class Game:
         async def tick():
             nonlocal lastChunks
 
+            self.moveBullets()
+
             if tickCount % (2 * Config.tickrate) == 0: # Every around 2 seconds
                 await self.updateStats()
                 self.revivePlayers()
@@ -109,6 +111,14 @@ class Game:
 
                     chunks.append(chunk)
 
+                for bulletId in dict(self.bullets):
+                    bullet = self.bullets[bulletId]
+
+                    if player.position == bullet.position and player.floor == bullet.floor and not bullet.owner == playerId:
+                        self.kill(playerId, bullet.owner)
+                        self.bullets.pop(bulletId)
+                        break
+
                 lastChunks = chunks
 
             # Active bots
@@ -117,17 +127,31 @@ class Game:
                     self.bots[botId] = self.botsInactive.pop(botId)
                     if Config.logging: print(f"[G] Active bot: {botId}")
 
-            # Disable bots
+            # Bot loop
             for botId in dict(self.bots):
-                if not self.bots[botId].chunk in chunks:
+                bot = self.bots[botId]
+
+                if not bot.chunk in chunks:
                     self.botsInactive[botId] = self.bots.pop(botId)
                     if Config.logging: print(f"[G] Disabled bot: {botId}")
 
-            self.updateBullets()
+                else:
+                    lastBotPos = bot.pos
+                    bot.move()
 
-            # Bot loop
-            for bot in self.bots:
-                self.bots[bot].move()
+                    # Check if bot was killed
+                    for bulletId in dict(self.bullets):
+                        bullet = self.bullets[bulletId]
+
+                        if bullet.position == bot.pos and bullet.floor == bot.floor:
+                            self.kill(botId, bullet.owner, botKilled = True)
+                            self.bullets.pop(bulletId)
+                            break
+
+                        elif bullet.lastPosition == bot.pos and lastBotPos == bullet.position and bullet.floor == bot.floor:
+                            self.kill(botId, bullet.owner, botKilled = True)
+                            self.bullets.pop(bulletId)
+                            break
 
             if len(self.deadConnections) > 0:
                 self.removeDeadConnections()
@@ -424,17 +448,17 @@ class Game:
         if topLeftCorner[1] + Config.clientDimensions[1] >= Config.mapDimensions[1]:
             topLeftCorner[1] = Config.mapDimensions[1] - Config.clientDimensions[1]
 
-        maxAmountOfChunksX = ceil(Config.clientDimensions[0] / Config.chunkSize)
-        maxAmountOfChunksY = ceil(Config.clientDimensions[1] / Config.chunkSize)
+        maxAmountOfChunksX = ceil(Config.clientDimensions[0] / Config.chunkSize) + 1
+        maxAmountOfChunksY = ceil(Config.clientDimensions[1] / Config.chunkSize) + 1
 
-        lastChunkX = ceil(Config.mapDimensions[0] / Config.chunkSize) - 1
-        lastChunkY = ceil(Config.mapDimensions[1] / Config.chunkSize) - 1
+        # lastChunkX = ceil(Config.mapDimensions[0] / Config.chunkSize) - 1
+        # lastChunkY = ceil(Config.mapDimensions[1] / Config.chunkSize) - 1
 
         for y in range(maxAmountOfChunksY):
             for x in range(maxAmountOfChunksX):
                 chunk = self.getChunk((topLeftCorner[0] + x * Config.chunkSize, topLeftCorner[1] + y * Config.chunkSize))
-                if not (chunk[0] < 0 or chunk[1] < 0 or chunk[0] > lastChunkX or chunk[1] > lastChunkY): 
-                    output.append(chunk)
+                # if not (chunk[0] < 0 or chunk[1] < 0 or chunk[0] > lastChunkX or chunk[1] > lastChunkY):
+                output.append(chunk)
 
         return output
 
@@ -502,43 +526,27 @@ class Game:
 
         self.bullets[index] = Bullet(index, playerId, pos, player.floor, player.facing)
 
-    def updateBullets(self):
+    def moveBullets(self):
         toRemove = []
-        for bulletKey in self.bullets:
-            bullet = self.bullets[bulletKey]
+
+        for bulletId in dict(self.bullets):
+            bullet = self.bullets[bulletId]
             pos = self.getNextPos(bullet.position, bullet.direction)
 
             title = self.getTitle(pos, bullet.floor)
 
             # Check if bullet is in playarea
             if self.mapDimensions[0] - 1 < pos[0] or pos[0] < 0 or self.mapDimensions[1] - 1 < pos[1] or pos[1] < 0:
-                toRemove.append(bulletKey)
+                self.bullets.pop(bulletId)
+                continue
 
             # Check for collisions
             elif title in FULL_SOLID:
-                toRemove.append(bulletKey)
+                self.bullets.pop(bulletId)
+                continue
 
-            # Check for kills
-            elif title == PLAYER_CHAR:
-                for playerKey in self.players:
-                    if self.players[playerKey].position == pos and bullet.floor == self.players[playerKey].floor:
-                        toRemove.append(bulletKey)
-                        self.kill(playerKey, bullet.owner)
-
-            else:
-                for botId in self.bots:
-                    if self.bots[botId].pos == pos and bullet.floor == self.bots[botId].floor:
-                        toRemove.append(bulletKey)
-                        self.kill(botId, bullet.owner, botKilled = True)
-
+            bullet.lastPosition = bullet.position
             bullet.position = pos
-
-        # Garbage collect bullets
-        for bulletKey in toRemove:
-            try:
-                self.bullets.pop(bulletKey)
-            except:
-                pass
 
     def kill(self, killedId, killerId, botKilled = False):
         if botKilled:
