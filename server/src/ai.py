@@ -74,8 +74,8 @@ class Bot:
 			else:
 				self.zombieToDir = randrange(0, 4)
 				if tries > 6: return
-				tryMoving()
 				tries += 1
+				tryMoving()
 
 		tryMoving()
 
