@@ -65,9 +65,8 @@ class Game:
                 self.map[floor][bouldery][boulderx] = BOULDER_CHAR
 
         # Create initial bots
-        totalPlayArea = Config.mapDimensions[0] * Config.mapDimensions[1]
-        for botId in range(0, round(totalPlayArea/Config.botAmount)):
-            self.bots[botId] = Bot(self, self.getSpawnPosition(), 1)
+        for botId in range(0, round(Config.botAmount)):
+            self.botsInactive[botId] = Bot(self, self.getSpawnPosition(), 1)
 
 
     ## NETWORKING AND GAME MANAGMENT
@@ -491,7 +490,7 @@ class Game:
             # Check if killed by bot
             for botId in self.bots:
                 if self.bots[botId].pos == pos:
-                    self.kill(playerId, False)
+                    self.kill(playerId, None)
 
             if not title in [PLAYER_CHAR, BOULDER_CHAR, WALL_CHAR, GEYSIR_CHAR, FORTIFIED_CHAR]:
                 player.position = pos
@@ -552,12 +551,12 @@ class Game:
     def kill(self, killedId, killerId, botKilled = False):
         if botKilled:
             self.bots[killedId].pos = self.getSpawnPosition(floor = self.bots[killedId].floor)
-            self.players[killerId].score += 50
-            self.players[killerId].money += 15
+            self.players[killerId].score += 80
+            self.players[killerId].money += 100
             return
 
         killed = self.players[killedId]
-        owner = self.players[killerId] if killerId != False else False 
+        owner = self.players[killerId] if killerId != None else False 
 
         if killed.health < 2:
             killed.dead = True
@@ -567,10 +566,11 @@ class Game:
         else: killed.health -= 1
 
         if owner:
-            owner.score += 100
-            owner.money += 50
+            owner.score += 120
+            owner.money += 150
         
-        killed.money = killed.money - (35 if killerId else 10)
+        killed.money = killed.money - (20 if killerId != None else 10)
+        if killed.money < 0: killed.money = 0
 
     def createRandomBoulder(self, count):
         for i in range(count):

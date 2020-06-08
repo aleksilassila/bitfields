@@ -46,7 +46,7 @@ class Bot:
 
 			for playerId in self.game.players:
 				if self.game.players[playerId].position == newPos:
-					self.game.kill(playerId, False)
+					self.game.kill(playerId, None)
 
 		elif title in NO_GO:
 			self.sniffedPlayerPos = self.sniffedPlayerDir = None

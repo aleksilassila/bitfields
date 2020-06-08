@@ -21,4 +21,4 @@ class Config:
 
 	botRandomTurnChange = 20
 	botSniffRange = 10
-	botAmount = 45*61 # 1 bot per area defined here
+	botAmount = (mapDimensions[0] * mapDimensions[1]) / (60**2) # 1 bot per 60^2 area
