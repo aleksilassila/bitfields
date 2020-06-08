@@ -19,7 +19,7 @@ class Config:
 	class geyser:
 		lifespan = 20 # min
 		gain = 2 # Per minute
-		maxGain = minute * 8
+		maxGain = 60 * 8
 
 	doorCost = 1000
 	doorHealth = 3
