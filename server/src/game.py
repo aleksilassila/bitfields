@@ -671,7 +671,7 @@ class Game:
         geyser = self.geysers[geyserId]
         now = time()
         diff = round(now - geyser.lastCollected)
-        gain = diff * Config.geyser.gain if diff * Config.geyser.gain <= Config.geyser.maxGain else Config.geyser.maxGain
+        gain = diff * Config.geyserGain if diff * Config.geyserGain <= Config.geyserMaxGain else Config.geyserMaxGain
 
         self.players[playerId].money += gain
         self.players[playerId].score += gain

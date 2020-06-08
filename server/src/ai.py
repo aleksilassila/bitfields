@@ -45,7 +45,7 @@ class Bot:
 			self.pos = newPos
 
 			for playerId in self.game.players:
-				if self.game.players[playerId].position == newPos:
+				if self.game.players[playerId].position == newPos and self.game.players[playerId].floor == self.floor:
 					self.game.kill(playerId, None)
 
 		elif not title in CAN_MOVE_THROUGH:
@@ -80,6 +80,10 @@ class Bot:
 		tryMoving()
 
 	def sniffPlayers(self):
+		# Bots do errors too!
+		if randrange(Config.botErrorRate) == 0:
+			return
+
 		def getPos(direction, steps):
 			pos = self.pos
 			for x in range(0, steps + 1):
