@@ -25,6 +25,7 @@ const Home = () => {
             document.getElementById("game-container").style.display = "flex";
 
             let move = false; // w, d, s, a
+            let fineMove = false; // w, d, s, a
             let shoot = false;
             let doAction = false;
 
@@ -60,6 +61,10 @@ const Home = () => {
 
                 if (move !== false) {
                     payload.m = move;
+                    fineMove = false;
+                } else if (fineMove !== false) {
+                    payload.m = fineMove;
+                    fineMove = false;
                 }
 
                 if (shoot) {
@@ -277,6 +282,7 @@ const Home = () => {
             };
 
             document.onkeydown = (e) => {
+                // Move
                 if (e.key.toLowerCase() === "w") {
                     move = 0;
                 } else if (e.key.toLowerCase() === "d") {
@@ -286,7 +292,16 @@ const Home = () => {
                 } else if (e.key.toLowerCase() === "a") {
                     move = 3;
                 } else if (e.code === "Space") {
+                    // Actions
                     shoot = true;
+                } else if (e.code === "ArrowUp") {
+                    fineMove = 0;
+                } else if (e.code === "ArrowRight") {
+                    fineMove = 1;
+                } else if (e.code === "ArrowDown") {
+                    fineMove = 2;
+                } else if (e.code === "ArrowLeft") {
+                    fineMove = 3;
                 } else if (e.key.toLowerCase() === "e") {
                     doAction = true;
                 } else if (e.key.toLowerCase() === "f") {

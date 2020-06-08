@@ -14,6 +14,10 @@ const Help = ({ visible, setVisible }) => {
 						<span>W, A, S, D</span>
 					</li>
 					<li>
+						<span>Fine Movement (Move One Title): </span>
+						<span>Arrow Keys</span>
+					</li>
+					<li>
 						<span>Shoot: </span>
 						<span>Space</span>
 					</li>

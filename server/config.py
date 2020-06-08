@@ -13,7 +13,14 @@ class Config:
 	shootDelay = 2/(tickrate + 3) # Seconds
 	mineDelay = 2 # Seconds
 	
+
 	geyserChange = 15 # 1/15 change
+	
+	class geyser:
+		lifespan = 20 # min
+		gain = 2 # Per minute
+		maxGain = minute * 8
+
 	doorCost = 1000
 	doorHealth = 3
 	fortifyCost = 300

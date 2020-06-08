@@ -10,7 +10,7 @@ class Geyser:
 		self.floor = floor
 
 		self.lastCollected = now
-		self.deathTime = now + 10 * Config.minute
+		self.deathTime = now + Config.geyser.lifespan * Config.minute
 
 
 class Door:
