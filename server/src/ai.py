@@ -13,7 +13,7 @@ DOOR_CHAR = "D"
 FORTIFIED_CHAR = "▓"
 EMPTY_CHAR = " "
 
-NO_GO = [BOULDER_CHAR, WALL_CHAR, DOOR_CHAR, FORTIFIED_CHAR, LADDER_CHAR, GEYSIR_CHAR]
+CAN_MOVE_THROUGH = [EMPTY_CHAR, GRASS_ALT_CHAR, GRASS_CHAR]
 
 class Bot:
 	def __init__(self, game, pos, floor):
@@ -48,7 +48,7 @@ class Bot:
 				if self.game.players[playerId].position == newPos:
 					self.game.kill(playerId, None)
 
-		elif title in NO_GO:
+		elif not title in CAN_MOVE_THROUGH:
 			self.sniffedPlayerPos = self.sniffedPlayerDir = None
 			
 		elif newPos == self.sniffedPlayerPos:
@@ -68,7 +68,7 @@ class Bot:
 			nonlocal tries
 			newPos = self.game.getNextPos(self.pos, self.zombieToDir)
 
-			if self.game.getTitle(newPos, floor = self.floor) in [EMPTY_CHAR, GRASS_CHAR]:
+			if self.game.getTitle(newPos, floor = self.floor) in CAN_MOVE_THROUGH:
 				self.pos = newPos
 
 			else:
@@ -99,5 +99,5 @@ class Bot:
 						self.sniffedPlayerPos = nextPos
 						self.sniffedPlayerDir = direction
 						return
-					elif title in NO_GO:
+					elif not title in CAN_MOVE_THROUGH:
 						blockedDirections.append(direction)

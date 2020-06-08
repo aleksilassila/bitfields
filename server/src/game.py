@@ -18,13 +18,13 @@ GRASS_CHAR = "."
 GRASS_ALT_CHAR = "_"
 LADDER_CHAR = "H"
 BUSH_CHAR = "B"
-GEYSIR_CHAR = "M"
+GEYSER_CHAR = "M"
 DOOR_CHAR = "D"
 FORTIFIED_CHAR = "▓"
 EMPTY_CHAR = " "
 
 # Cant shoot nor move through
-FULL_SOLID = [WALL_CHAR, BOULDER_CHAR, FORTIFIED_CHAR, DOOR_CHAR]
+PLAYER_CAN_MOVE_THROUGH = [EMPTY_CHAR, GRASS_CHAR, GRASS_ALT_CHAR, LADDER_CHAR, BUSH_CHAR, ]
 
 class Game:
     def __init__(self):
@@ -65,8 +65,15 @@ class Game:
                 self.map[floor][bouldery][boulderx] = BOULDER_CHAR
 
         # Create initial bots
-        for botId in range(0, round(Config.botAmount)):
-            self.botsInactive[botId] = Bot(self, self.getSpawnPosition(), 1)
+        botId = 0
+        for x in range(0, round(Config.botAmount)):
+
+            if x % 2 == 0: # 1/2 of bot amount in overworld
+                self.botsInactive[botId] = Bot(self, self.getSpawnPosition(), 1)
+                botId += 1
+
+            self.botsInactive[botId] = Bot(self, self.getSpawnPosition(floor = 0), 0)
+            botId += 1
 
 
     ## NETWORKING AND GAME MANAGMENT
@@ -386,7 +393,7 @@ class Game:
                 geyserPositions.append(self.geysers[geyserId].position)
 
         if pos in geyserPositions:
-            return GEYSIR_CHAR
+            return GEYSER_CHAR
 
         # Check for doors
         doorPositions = []
@@ -465,7 +472,7 @@ class Game:
         while True:
             pos = (randrange(4, self.mapDimensions[0] - 4), randrange(4, self.mapDimensions[1] - 4))
             
-            if self.getTitle(pos, floor = floor) in [EMPTY_CHAR, GRASS_CHAR, GRASS_ALT_CHAR]:
+            if self.getTitle(pos, floor = floor) in PLAYER_CAN_MOVE_THROUGH:
                 return pos
 
     def movePlayer(self, playerId, direction):
@@ -492,7 +499,7 @@ class Game:
                 if self.bots[botId].pos == pos:
                     self.kill(playerId, None)
 
-            if not title in [PLAYER_CHAR, BOULDER_CHAR, WALL_CHAR, GEYSIR_CHAR, FORTIFIED_CHAR]:
+            if title in PLAYER_CAN_MOVE_THROUGH:
                 player.position = pos
 
                 # if pos[0] % Config.chunkSize == 0 or pos[1] % Config.chunkSize == 0:
@@ -521,7 +528,7 @@ class Game:
 
         if self.mapDimensions[0] - 1 < pos[0] or pos[0] < 0 or self.mapDimensions[1] - 1 < pos[1] or pos[1] < 0:
             return
-        elif self.getTitle(pos, player.floor) in FULL_SOLID:
+        elif not self.getTitle(pos, player.floor) in PLAYER_CAN_MOVE_THROUGH:
             return
 
         self.bullets[index] = Bullet(index, playerId, pos, player.floor, player.facing)
@@ -541,7 +548,7 @@ class Game:
                 continue
 
             # Check for collisions
-            elif title in FULL_SOLID:
+            elif not title in PLAYER_CAN_MOVE_THROUGH:
                 self.bullets.pop(bulletId)
                 continue
 
@@ -654,7 +661,7 @@ class Game:
             self.pick(player, pos)
         elif title in [WALL_CHAR, DOOR_CHAR, FORTIFIED_CHAR]:
             await self.mineWall(player, pos, title)
-        elif title == GEYSIR_CHAR:
+        elif title == GEYSER_CHAR:
             for geyserId in self.geysers:
                 if self.geysers[geyserId].position == pos:
                     self.collectGeysir(playerId, geyserId)
