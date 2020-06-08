@@ -2,11 +2,14 @@ import asyncio
 import json
 from random import randrange
 from time import time
+from math import floor, ceil
+from collections import Counter
 
-from src.config import Config
+from config import Config
 from src.generator import Generator
 from src.bullet import Bullet
 from src.gameStructures import Door, Fortified, Geyser
+from src.ai import Bot
 
 PLAYER_CHAR = "@"
 WALL_CHAR = "#"
@@ -15,26 +18,28 @@ GRASS_CHAR = "."
 GRASS_ALT_CHAR = "_"
 LADDER_CHAR = "H"
 BUSH_CHAR = "B"
-GEYSIR_CHAR = "M"
+GEYSER_CHAR = "M"
 DOOR_CHAR = "D"
 FORTIFIED_CHAR = "▓"
 EMPTY_CHAR = " "
 
 # Cant shoot nor move through
-FULL_SOLID = [WALL_CHAR, BOULDER_CHAR, FORTIFIED_CHAR, DOOR_CHAR]
+PLAYER_CAN_MOVE_THROUGH = [EMPTY_CHAR, GRASS_CHAR, GRASS_ALT_CHAR, LADDER_CHAR, BUSH_CHAR, ]
 
 class Game:
     def __init__(self):
-
         self.logging = True
 
         # Game logic
         self.players = {}
+        self.bots = {}
+        self.botsInactive = {}
 
         self.bullets = {}
         self.bulletsIndex = 0
 
         self.geysers = {}
+        self.geysersInactive = {}
         self.geysersIndex = 0
 
         self.doors = {}
@@ -46,7 +51,7 @@ class Game:
         # Game managment
         self.titlesToUpdate = []
         self.deadConnections = []
-        self.mapDimensions = (61, 45)
+        self.mapDimensions = Config.mapDimensions
         gen = Generator(self.mapDimensions[0], self.mapDimensions[1], -200)
 
         self.map = [gen.getUnderworld(), gen.getOverworld()]
@@ -59,32 +64,120 @@ class Game:
                 bouldery = boulder[1]
                 self.map[floor][bouldery][boulderx] = BOULDER_CHAR
 
+        # Create initial bots
+        botId = 0
+        for x in range(0, round(Config.botAmount)):
+
+            if x % 2 == 0: # 1/2 of bot amount in overworld
+                self.botsInactive[botId] = Bot(self, self.getSpawnPosition(), 1)
+                botId += 1
+
+            self.botsInactive[botId] = Bot(self, self.getSpawnPosition(floor = 0), 0)
+            botId += 1
+
 
     ## NETWORKING AND GAME MANAGMENT
     async def start(self):
         async def tick():
-            if tickCount % Config.tickrate == 0: # Every around second
+            nonlocal lastChunks
+
+            self.moveBullets()
+
+            if tickCount % (2 * Config.tickrate) == 0: # Every around 2 seconds
                 await self.updateStats()
                 self.revivePlayers()
 
-            self.updateBullets()
-            await self.updatePlayers()
-            await asyncio.sleep(1/Config.tickrate)
+            chunksActivated = []
+            chunks = []
+
+            # Player loop
+            for playerId in self.players:
+                player = self.players[playerId]
+
+                # Do actions
+                if "m" in player.queue:
+                    self.movePlayer(playerId, player.facing)
+
+                if "s" in player.queue:
+                    self.shoot(playerId)
+
+                if "a" in player.queue:
+                    await self.action(playerId)
+
+                if "d" in player.queue:
+                    self.placeDoor(playerId)
+
+                if "f" in player.queue:
+                    self.fortify(playerId)
+
+                # Create chunk map of activated
+                for chunk in player.chunks:
+                    if not chunk in lastChunks:
+                        chunksActivated.append(chunk)
+
+                    chunks.append(chunk)
+
+                for bulletId in dict(self.bullets):
+                    bullet = self.bullets[bulletId]
+
+                    if player.position == bullet.position and player.floor == bullet.floor and not bullet.owner == playerId:
+                        self.kill(playerId, bullet.owner)
+                        self.bullets.pop(bulletId)
+                        break
+
+                lastChunks = chunks
+
+            # Active bots
+            for botId in dict(self.botsInactive):
+                if self.botsInactive[botId].chunk in chunksActivated:
+                    self.bots[botId] = self.botsInactive.pop(botId)
+                    if Config.logging: print(f"[G] Active bot: {botId}")
+
+            # Bot loop
+            for botId in dict(self.bots):
+                bot = self.bots[botId]
+
+                if not bot.chunk in chunks:
+                    self.botsInactive[botId] = self.bots.pop(botId)
+                    if Config.logging: print(f"[G] Disabled bot: {botId}")
+
+                else:
+                    lastBotPos = bot.pos
+                    bot.move()
+
+                    # Check if bot was killed
+                    for bulletId in dict(self.bullets):
+                        bullet = self.bullets[bulletId]
+
+                        if bullet.position == bot.pos and bullet.floor == bot.floor:
+                            self.kill(botId, bullet.owner, botKilled = True)
+                            self.bullets.pop(bulletId)
+                            break
+
+                        elif bullet.lastPosition == bot.pos and lastBotPos == bullet.position and bullet.floor == bot.floor:
+                            self.kill(botId, bullet.owner, botKilled = True)
+                            self.bullets.pop(bulletId)
+                            break
 
             if len(self.deadConnections) > 0:
                 self.removeDeadConnections()
 
+            await self.updatePlayers()
+            await asyncio.sleep(1/Config.tickrate)
 
         tickCount = 1
+        print("Server started.")
         while True:
+            lastChunks = []
             await tick()
 
-            if tickCount >= Config.tickrate:
+            if tickCount >= Config.tickrate * 2:
                 tickCount = 1
             else: tickCount += 1
 
     async def updatePlayers(self, scores = False):
         players = {}
+        bots = {}
         bullets = {}
         updates = []
         geysers = {}
@@ -120,10 +213,18 @@ class Game:
             updates.append({ "p": pos, "c": self.getTitle((pos[0], pos[1]), pos[2]) })
         self.titlesToUpdate = []
 
+        # Bots
+        for botId in self.bots:
+            bots[botId] = {
+                "p": self.bots[botId].pos,
+                "f": self.bots[botId].floor
+            }
+
         for playerId in self.players:
             try:
                 await self.players[playerId].socket.send(json.dumps({
                     "p": players, # Player positions
+                    "n": bots, # NPC positions
                     "i": playerId, # Self playerid
                     "f": self.players[playerId].floor, # Floor
                     "b": bullets, # Bullets
@@ -217,41 +318,37 @@ class Game:
                 floor = self.fortified[fortifyId].floor
                 mapToSend[floor][pos[1]][pos[0]] = FORTIFIED_CHAR
 
-
             await player.socket.send(json.dumps({
                 "map": mapToSend,
                 "tickrate": Config.tickrate,
                 "playerId": playerId
             }))
 
+            player.chunks = self.getChunksAround(player.position)
+
             while True:
                 data = await player.socket.recv()
                 
                 action = json.loads(data)
+                player.queue = {}
 
-                # Check for speedhacks
-                if time() - player.recvTime > (1/(Config.tickrate + Config.ticksForgiven)):
-                    player.recvTime = time()
-                    if not player.dead:
+                if not player.dead:
 
-                        if "m" in action:
-                            player.facing = action["m"]
-                            self.movePlayer(playerId, action["m"])
+                    if "m" in action:
+                        player.facing = action["m"]
+                        player.queue["m"] = action["m"]
 
-                        if "s" in action:
-                            self.shoot(playerId)
+                    if "s" in action:
+                        player.queue["s"] = 1
 
-                        if "a" in action:
-                            await self.action(playerId)
+                    if "a" in action:
+                        player.queue["a"] = 1
 
-                        if "d" in action:
-                            self.placeDoor(playerId)
+                    if "d" in action:
+                        player.queue["d"] = 1
 
-                        if "f" in action:
-                            self.fortify(playerId)
-
-                else:
-                    print(f"[?] Throttled {playerId}")
+                    if "f" in action:
+                        player.queue["f"] = 1
                 
         except Exception as e:
             if self.logging: print(e)
@@ -264,6 +361,7 @@ class Game:
 
             if player.dead:
                 player.position = self.getSpawnPosition()
+                player.chunks = self.getChunksAround(player.position)
                 player.dead = False
 
 
@@ -295,7 +393,7 @@ class Game:
                 geyserPositions.append(self.geysers[geyserId].position)
 
         if pos in geyserPositions:
-            return GEYSIR_CHAR
+            return GEYSER_CHAR
 
         # Check for doors
         doorPositions = []
@@ -332,10 +430,49 @@ class Game:
 
         return nextPos
 
-    def getSpawnPosition(self):
+    def getChunk(self, pos, axis = None):
+        if axis == "x":
+            return floor(pos[0] / Config.chunkSize)
+
+        elif axis == "y":
+            return floor(pos[1] / Config.chunkSize)
+
+        return (floor(pos[0] / Config.chunkSize), floor(pos[1] / Config.chunkSize))
+
+    def getChunksAround(self, pos):
+        output = []
+
+        topLeftCorner = [
+            pos[0] - floor(Config.clientDimensions[0]/2),
+            pos[1] - floor(Config.clientDimensions[1]/2)
+        ]
+
+        if topLeftCorner[0] < 0: topLeftCorner[0] = 0
+        if topLeftCorner[1] < 0: topLeftCorner[1] = 0
+        if topLeftCorner[0] + Config.clientDimensions[0] >= Config.mapDimensions[0]:
+            topLeftCorner[0] = Config.mapDimensions[0] - Config.clientDimensions[0]
+        if topLeftCorner[1] + Config.clientDimensions[1] >= Config.mapDimensions[1]:
+            topLeftCorner[1] = Config.mapDimensions[1] - Config.clientDimensions[1]
+
+        maxAmountOfChunksX = ceil(Config.clientDimensions[0] / Config.chunkSize) + 1
+        maxAmountOfChunksY = ceil(Config.clientDimensions[1] / Config.chunkSize) + 1
+
+        # lastChunkX = ceil(Config.mapDimensions[0] / Config.chunkSize) - 1
+        # lastChunkY = ceil(Config.mapDimensions[1] / Config.chunkSize) - 1
+
+        for y in range(maxAmountOfChunksY):
+            for x in range(maxAmountOfChunksX):
+                chunk = self.getChunk((topLeftCorner[0] + x * Config.chunkSize, topLeftCorner[1] + y * Config.chunkSize))
+                # if not (chunk[0] < 0 or chunk[1] < 0 or chunk[0] > lastChunkX or chunk[1] > lastChunkY):
+                output.append(chunk)
+
+        return output
+
+    def getSpawnPosition(self, floor = 1):
         while True:
-            pos = (randrange(self.mapDimensions[0]), randrange(self.mapDimensions[1]))
-            if self.getTitle(pos, 1) not in [PLAYER_CHAR, BOULDER_CHAR, WALL_CHAR]:
+            pos = (randrange(4, self.mapDimensions[0] - 4), randrange(4, self.mapDimensions[1] - 4))
+            
+            if self.getTitle(pos, floor = floor) in PLAYER_CAN_MOVE_THROUGH:
                 return pos
 
     def movePlayer(self, playerId, direction):
@@ -357,9 +494,16 @@ class Game:
                             return
                         break
 
+            # Check if killed by bot
+            for botId in self.bots:
+                if self.bots[botId].pos == pos:
+                    self.kill(playerId, None)
 
-            if not title in [PLAYER_CHAR, BOULDER_CHAR, WALL_CHAR, GEYSIR_CHAR, FORTIFIED_CHAR]:
+            if title in PLAYER_CAN_MOVE_THROUGH:
                 player.position = pos
+
+                # if pos[0] % Config.chunkSize == 0 or pos[1] % Config.chunkSize == 0:
+                player.chunks = self.getChunksAround(pos)
 
     def shoot(self, playerId):
         index = self.bulletsIndex
@@ -384,53 +528,56 @@ class Game:
 
         if self.mapDimensions[0] - 1 < pos[0] or pos[0] < 0 or self.mapDimensions[1] - 1 < pos[1] or pos[1] < 0:
             return
-        elif self.getTitle(pos, player.floor) in FULL_SOLID:
+        elif not self.getTitle(pos, player.floor) in PLAYER_CAN_MOVE_THROUGH:
             return
 
         self.bullets[index] = Bullet(index, playerId, pos, player.floor, player.facing)
 
-    def updateBullets(self):
+    def moveBullets(self):
         toRemove = []
-        for bulletKey in self.bullets:
-            bullet = self.bullets[bulletKey]
+
+        for bulletId in dict(self.bullets):
+            bullet = self.bullets[bulletId]
             pos = self.getNextPos(bullet.position, bullet.direction)
+
+            title = self.getTitle(pos, bullet.floor)
 
             # Check if bullet is in playarea
             if self.mapDimensions[0] - 1 < pos[0] or pos[0] < 0 or self.mapDimensions[1] - 1 < pos[1] or pos[1] < 0:
-                toRemove.append(bulletKey)
+                self.bullets.pop(bulletId)
+                continue
 
             # Check for collisions
-            elif self.getTitle(pos, bullet.floor) in FULL_SOLID:
-                toRemove.append(bulletKey)
+            elif not title in PLAYER_CAN_MOVE_THROUGH:
+                self.bullets.pop(bulletId)
+                continue
 
-            # Check for kills
-            else:
-                for playerKey in self.players:
-                    if self.players[playerKey].position == pos and bullet.floor == self.players[playerKey].floor:
-                        toRemove.append(bulletKey)
-                        self.kill(playerKey, bullet.owner)
-
+            bullet.lastPosition = bullet.position
             bullet.position = pos
 
-        # Garbage collect bullets
-        for bulletKey in toRemove:
-            try:
-                self.bullets.pop(bulletKey)
-            except:
-                pass
+    def kill(self, killedId, killerId, botKilled = False):
+        if botKilled:
+            self.bots[killedId].pos = self.getSpawnPosition(floor = self.bots[killedId].floor)
+            self.players[killerId].score += 80
+            self.players[killerId].money += 100
+            return
 
-    def kill(self, playerId, ownerId):
-        player = self.players[playerId]
-        owner = self.players[ownerId]
+        killed = self.players[killedId]
+        owner = self.players[killerId] if killerId != None else False 
 
-        if player.health < 2:
-            player.dead = True
-            player.position = (None, None)
-            player.floor = 1
-        else: player.health -= 1
+        if killed.health < 2:
+            killed.dead = True
+            killed.position = (None, None)
+            killed.floor = 1
 
-        owner.score += 100
-        owner.money += 100
+        else: killed.health -= 1
+
+        if owner:
+            owner.score += 120
+            owner.money += 150
+        
+        killed.money = killed.money - (20 if killerId != None else 10)
+        if killed.money < 0: killed.money = 0
 
     def createRandomBoulder(self, count):
         for i in range(count):
@@ -514,7 +661,7 @@ class Game:
             self.pick(player, pos)
         elif title in [WALL_CHAR, DOOR_CHAR, FORTIFIED_CHAR]:
             await self.mineWall(player, pos, title)
-        elif title == GEYSIR_CHAR:
+        elif title == GEYSER_CHAR:
             for geyserId in self.geysers:
                 if self.geysers[geyserId].position == pos:
                     self.collectGeysir(playerId, geyserId)
@@ -524,7 +671,7 @@ class Game:
         geyser = self.geysers[geyserId]
         now = time()
         diff = round(now - geyser.lastCollected)
-        gain = diff if diff <= Config.minute * 8 else Config.minute * 6
+        gain = diff * Config.geyser.gain if diff * Config.geyser.gain <= Config.geyser.maxGain else Config.geyser.maxGain
 
         self.players[playerId].money += gain
         self.players[playerId].score += gain

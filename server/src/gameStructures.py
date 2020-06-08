@@ -1,5 +1,5 @@
 from time import time
-from src.config import Config
+from config import Config
 
 class Geyser:
 	def __init__(self, geyserId, position, floor):
@@ -10,7 +10,7 @@ class Geyser:
 		self.floor = floor
 
 		self.lastCollected = now
-		self.deathTime = now + 10 * Config.minute
+		self.deathTime = now + Config.geyser.lifespan * Config.minute
 
 
 class Door:

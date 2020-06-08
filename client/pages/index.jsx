@@ -6,7 +6,7 @@ import RoundButton from "../components/RoundButton";
 
 const Home = () => {
     const [name, setName] = useState("");
-    const [scores, setScores] = useState({});
+    const [stats, setStats] = useState({});
     const [playerId, setPlayerId] = useState(false);
     const [currentFloor, setCurrentFloor] = useState(1);
 
@@ -25,6 +25,7 @@ const Home = () => {
             document.getElementById("game-container").style.display = "flex";
 
             let move = false; // w, d, s, a
+            let fineMove = false; // w, d, s, a
             let shoot = false;
             let doAction = false;
 
@@ -60,6 +61,10 @@ const Home = () => {
 
                 if (move !== false) {
                     payload.m = move;
+                    fineMove = false;
+                } else if (fineMove !== false) {
+                    payload.m = fineMove;
+                    fineMove = false;
                 }
 
                 if (shoot) {
@@ -104,7 +109,7 @@ const Home = () => {
 
             ws.onmessage = (m) => {
                 if (m.data[0] === "s") {
-                    setScores(JSON.parse(m.data.substr(1)));
+                    setStats(JSON.parse(m.data.substr(1)));
                     return;
                 }
 
@@ -159,6 +164,17 @@ const Home = () => {
                         const pos = action.p[key].p;
                         mapToPrint[pos[1]][pos[0]] =
                             key === action.i.toString() ? "&" : "@";
+                    }
+                }
+
+                // Render bots
+                for (let key in action.n) {
+                    if (
+                        action.n[key].p[0] !== null &&
+                        action.n[key].f === action.f
+                    ) {
+                        const pos = action.n[key].p;
+                        mapToPrint[pos[1]][pos[0]] = "B";
                     }
                 }
 
@@ -227,7 +243,11 @@ const Home = () => {
                         if (character === "&") {
                             ctx.fillStyle = "white";
                             ctx.shadowColor = "white";
-                        } else if (character === "@" || character === "•") {
+                        } else if (
+                            character === "@" ||
+                            character === "•" ||
+                            character === "B"
+                        ) {
                             ctx.fillStyle = "red";
                             ctx.shadowColor = "red";
                         } else if (character === "_" || character === ".") {
@@ -262,6 +282,7 @@ const Home = () => {
             };
 
             document.onkeydown = (e) => {
+                // Move
                 if (e.key.toLowerCase() === "w") {
                     move = 0;
                 } else if (e.key.toLowerCase() === "d") {
@@ -271,7 +292,16 @@ const Home = () => {
                 } else if (e.key.toLowerCase() === "a") {
                     move = 3;
                 } else if (e.code === "Space") {
+                    // Actions
                     shoot = true;
+                } else if (e.code === "ArrowUp") {
+                    fineMove = 0;
+                } else if (e.code === "ArrowRight") {
+                    fineMove = 1;
+                } else if (e.code === "ArrowDown") {
+                    fineMove = 2;
+                } else if (e.code === "ArrowLeft") {
+                    fineMove = 3;
                 } else if (e.key.toLowerCase() === "e") {
                     doAction = true;
                 } else if (e.key.toLowerCase() === "f") {
@@ -330,55 +360,41 @@ const Home = () => {
                 value="?"
             />
             <div id="game-container">
-                {/*                <div id="toolbar">
-                    <Button
-                        id="fortify-button"
-                        className="toolbar-button"
-                        value="Fortify $300"
-                    />
-                    <Button
-                        id="door-button"
-                        className="toolbar-button"
-                        value="Door $1000"
-                    />
-                </div>*/}
                 <div id="game-wrapper">
                     <canvas id="game"></canvas>
                     <div id="toolbar">
                         <span id="toolbar-name">
                             Name:{" "}
                             <span className="stats-color">
-                                {scores[playerId] ? scores[playerId].n : null}
+                                {stats[playerId] ? stats[playerId].n : null}
                             </span>
                         </span>
                         {currentFloor ? (
                             <span id="toolbar-score">
                                 Score:{" "}
                                 <span className="stats-color">
-                                    {scores[playerId]
-                                        ? scores[playerId].s
-                                        : null}
+                                    {stats[playerId] ? stats[playerId].s : null}
                                 </span>
                             </span>
                         ) : null}
                         <span id="toolbar-money">
                             Money:{" "}
                             <span className="stats-color">
-                                {scores[playerId] ? scores[playerId].m : null}
+                                {stats[playerId] ? stats[playerId].m : null}
                             </span>
                         </span>
                         <span id="toolbar-health">
                             Health:{" "}
                             <span className="stats-color">
-                                {scores[playerId] ? scores[playerId].h : null}
+                                {stats[playerId] ? stats[playerId].h : null}
                             </span>
                         </span>
                         {currentFloor ? (
                             <span id="toolbar-position">
                                 Position:{" "}
                                 <span className="stats-color">
-                                    {scores[playerId]
-                                        ? `${scores[playerId].p[0]}, ${scores[playerId].p[1]}`
+                                    {stats[playerId]
+                                        ? `${stats[playerId].p[0]}, ${stats[playerId].p[1]}`
                                         : null}
                                 </span>
                             </span>
@@ -388,23 +404,20 @@ const Home = () => {
                 <div id="highscores">
                     <h2>Leaderboard</h2>
                     <ul>
-                        {Object.keys(scores).map((key, index) => {
-                            if (index < 5) {
-                                return (
-                                    <li key={index}>
-                                        {scores[key].n}: {scores[key].s}
-                                    </li>
-                                );
-                            }
-                        })}
+                        {Object.keys(stats)
+                            .sort((a, b) => {
+                                return stats[b].s - stats[a].s;
+                            })
+                            .map((key, index) => {
+                                if (index < 5) {
+                                    return (
+                                        <li key={index}>
+                                            {stats[key].n}: {stats[key].s}
+                                        </li>
+                                    );
+                                }
+                            })}
                     </ul>
-                    {/*                    <h2>Your stats</h2>
-                    {scores[playerId] ? (
-                        <ul>
-                            <li>Score: {scores[playerId].s}</li>
-                            <li>Money: {scores[playerId].m}</li>
-                        </ul>
-                    ) : null}*/}
                 </div>
             </div>
             <link

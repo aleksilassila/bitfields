@@ -2,8 +2,8 @@ import asyncio
 import websockets
 from time import sleep, time
 
+from config import Config
 from src.game import Game
-from src.config import Config
 from src.player import Player
 
 playerId = 0

@@ -27,3 +27,10 @@ Live demo upcoming later...
 ![](screenshot1.png?raw=true "Welcome to the Bitfields!")
 ![](screenshot2.png?raw=true "Potentially endless procedural worlds!")
 ![](screenshot3.png?raw=true "Underworld cave system with limited visibility ^^")
+
+## To Do
+
+-   Spawn points
+-   Reduce amount of loops: make more efficient
+-   Teams?
+-   Place ladders?
