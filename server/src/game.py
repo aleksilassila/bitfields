@@ -95,7 +95,7 @@ class Game:
                 player = self.players[playerId]
 
                 # Do actions
-                if "m" in player.queue:
+                if "m" in player.queue and player.position[0] != None: # Fix this
                     self.movePlayer(playerId, player.facing)
 
                 if "s" in player.queue:
@@ -496,7 +496,7 @@ class Game:
 
             # Check if killed by bot
             for botId in self.bots:
-                if self.bots[botId].pos == pos:
+                if self.bots[botId].pos == pos and self.bots[botId].floor == player.floor:
                     self.kill(playerId, None)
 
             if title in PLAYER_CAN_MOVE_THROUGH:
