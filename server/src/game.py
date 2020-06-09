@@ -534,8 +534,6 @@ class Game:
         self.bullets[index] = Bullet(index, playerId, pos, player.floor, player.facing)
 
     def moveBullets(self):
-        toRemove = []
-
         for bulletId in dict(self.bullets):
             bullet = self.bullets[bulletId]
             pos = self.getNextPos(bullet.position, bullet.direction)
@@ -543,7 +541,10 @@ class Game:
             title = self.getTitle(pos, bullet.floor)
 
             # Check if bullet is in playarea
-            if self.mapDimensions[0] - 1 < pos[0] or pos[0] < 0 or self.mapDimensions[1] - 1 < pos[1] or pos[1] < 0:
+            if title == PLAYER_CHAR:
+                pass
+
+            elif self.mapDimensions[0] - 1 < pos[0] or pos[0] < 0 or self.mapDimensions[1] - 1 < pos[1] or pos[1] < 0:
                 self.bullets.pop(bulletId)
                 continue
 
