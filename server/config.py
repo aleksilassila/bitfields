@@ -1,4 +1,8 @@
 class Config:
+	# Production
+	serverAddress = None
+	serverIp = None
+
 	chunkSize = 16
 	mapDimensions = (chunkSize * 5, chunkSize * 5) # Min 61*39
 	clientDimensions = (61, 39)
