@@ -11,7 +11,6 @@ class Config:
 
 	logging = True
 	tickrate = 15
-	ticksForgiven = 5
 
 	minute = 60 # Make 30 to make game run 2x faster
 	shootDelay = 4/(tickrate + 3) # Seconds
