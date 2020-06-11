@@ -34,6 +34,10 @@ OR alternatively export frontend as static web page for serverless use:
 
 Inside `bitfields/client`: `yarn export` `(npm run export)`
 
+## Contributing
+
+All help is much appreciated, so feel free to contribute.
+
 ## Screenshots
 
 ![](screenshot1.png?raw=true "Welcome to the Bitfields!")
@@ -48,6 +52,7 @@ Inside `bitfields/client`: `yarn export` `(npm run export)`
 -   Breach ammunition? Mines?
 -   Announce kills / deaths
 -   Teams?
+-   Color schemes
 -   Place ladders?
 
 ## Bugs

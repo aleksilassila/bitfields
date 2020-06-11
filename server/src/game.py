@@ -24,7 +24,7 @@ FORTIFIED_CHAR = "█"
 EMPTY_CHAR = " "
 
 # Cant shoot nor move through
-PLAYER_CAN_MOVE_THROUGH = [EMPTY_CHAR, GRASS_CHAR, GRASS_ALT_CHAR, LADDER_CHAR, BUSH_CHAR, ]
+PLAYER_CAN_MOVE_THROUGH = [EMPTY_CHAR, GRASS_CHAR, GRASS_ALT_CHAR, LADDER_CHAR, BUSH_CHAR, DOOR_CHAR]
 
 class Game:
     def __init__(self):
@@ -489,7 +489,7 @@ class Game:
             # Check if door is owned by you
             elif title == DOOR_CHAR:
                 for doorId in self.doors:
-                    if self.doors[doorId].position == pos:
+                    if self.doors[doorId].position == pos and self.doors[doorId].floor == player.floor:
                         if self.doors[doorId].ownerId != playerId:
                             return
                         break
