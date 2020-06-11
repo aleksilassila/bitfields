@@ -206,7 +206,7 @@ const Home = () => {
                 c.style.width = w + "px";
                 c.style.height = h + "px";
                 ctx.clearRect(0, 0, c.width, c.height);
-                ctx.font = "10px Roboto Mono";
+                ctx.font = "10px Ubuntu Mono";
                 ctx.shadowOffsetX = 0;
                 ctx.shadowOffsetY = 0;
                 ctx.shadowBlur = 10;
@@ -425,7 +425,7 @@ const Home = () => {
                 </div>
             </div>
             <link
-                href="https://fonts.googleapis.com/css?family=Roboto+Mono&display=swap"
+                href="https://fonts.googleapis.com/css2?family=Roboto+Mono&family=Ubuntu+Mono&display=swap"
                 rel="stylesheet"
             />
             <style jsx global>{`
@@ -440,7 +440,7 @@ const Home = () => {
                         rgba(0, 0, 0, 1) 100%
                     );
 
-                    font-family: "Roboto mono", monospace;
+                    font-family: "Roboto Mono", monospace;
                     color: lime;
                     text-shadow: 0px 0px 3px lime;
                 }
@@ -477,7 +477,7 @@ const Home = () => {
                 }
 
                 #name-field {
-                    font-family: "Roboto mono", monospace;
+                    font-family: "Roboto Mono", monospace;
                     border-radius: 2px;
                     outline: none;
                     color: lime;
@@ -491,15 +491,6 @@ const Home = () => {
                     box-shadow: 0 0 5px 0px lime;
 
                     flex: 1 0 auto;
-                }
-
-                 {
-                    /*                #toolbar {
-                    display: flex;
-                    flex-direction: column;
-                    margin-right: 2em;
-                    padding: 0.83em 0;
-                }*/
                 }
 
                 #toolbar {
@@ -560,6 +551,16 @@ const Home = () => {
                 .stats-color {
                     color: mediumspringgreen;
                     text-shadow: 0px 0px 3px mediumspringgreen;
+                }
+
+                .gold {
+                    color: gold;
+                    text-shadow: 0px 0px 3px gold;
+                }
+
+                .red {
+                    color: red;
+                    text-shadow: 0px 0px 3px red;
                 }
 
                 button {

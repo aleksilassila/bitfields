@@ -44,6 +44,9 @@ Inside `bitfields/client`: `yarn export` `(npm run export)`
 
 -   Spawn points
 -   Reduce amount of loops: make more efficient
+-   Cave rooms / systems
+-   Breach ammunition? Mines?
+-   Announce kills / deaths
 -   Teams?
 -   Place ladders?
 

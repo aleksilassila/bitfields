@@ -7,33 +7,84 @@ const Help = ({ visible, setVisible }) => {
 				<button id="close" onClick={() => setVisible(false)}>
 					x
 				</button>
-				<h2>Keybinds</h2>
-				<ul>
-					<li>
-						<span>Move: </span>
-						<span>W, A, S, D</span>
-					</li>
-					<li>
-						<span>Fine Movement (Move One Title): </span>
-						<span>Arrow Keys</span>
-					</li>
-					<li>
-						<span>Shoot: </span>
-						<span>Space</span>
-					</li>
-					<li>
-						<span>Mine / Collect / Break: </span>
-						<span>E</span>
-					</li>
-					<li>
-						<span>Fortify Boulder ($300): </span>
-						<span>F</span>
-					</li>
-					<li>
-						<span>Place Door ($1000): </span>
-						<span>G</span>
-					</li>
-				</ul>
+				<div id="divider">
+					<div id="keybinds">
+						<h2>Keybinds</h2>
+						<ul>
+							<li>
+								<span>Move: </span>
+								<span>W, A, S, D</span>
+							</li>
+							<li>
+								<span>Fine Movement (Move One Title): </span>
+								<span>Arrow Keys</span>
+							</li>
+							<li>
+								<span>Shoot: </span>
+								<span>Space</span>
+							</li>
+							<li>
+								<span>Mine / Collect / Break: </span>
+								<span>E</span>
+							</li>
+							<li>
+								<span>Fortify Boulder ($100): </span>
+								<span>F</span>
+							</li>
+							<li>
+								<span>Place Door ($300): </span>
+								<span>G</span>
+							</li>
+						</ul>
+					</div>
+					<div id="titles">
+						<h2>Titles</h2>
+						<ul>
+							<li>
+								<span>#: Breakable wall</span>
+							</li>
+							<li>
+								<span>O: Pickable boulder</span>
+							</li>
+							<li>
+								<span>H: Ladder to underworld/overworld</span>
+							</li>
+							<li>
+								<span>
+									<span className="gold">M</span>: Geyser that
+									can be collected for money. Colors indicate
+									different amounts of money to be collected
+								</span>
+							</li>
+							<li>
+								<span>
+									<span className="red">B</span>: Enemy bot
+								</span>
+							</li>
+							<li>
+								<span>
+									<span className="red">@</span>: Enemy player
+								</span>
+							</li>
+							<li>
+								<span>
+									D: Door that only the creator can enter
+								</span>
+							</li>
+							<li>
+								<span>█: Fortified boulder</span>
+							</li>
+						</ul>
+					</div>
+				</div>
+				<h2>Overworld and Underworld</h2>
+				<p>
+					You can move between these levels using ladders (H). There's
+					limited visibility and more bots in Underworld, which makes
+					it a lot more dangerous place to roam in than Overworld.
+					However, it's a great palce for a hideout or a base, for
+					example. Just don't get lost down there!
+				</p>
 			</div>
 			<style jsx>{`
 				#help {
@@ -66,6 +117,11 @@ const Help = ({ visible, setVisible }) => {
 					background: none;
 					border: none;
 					font-size: 1.5em;
+				}
+
+				#divider {
+					display: flex;
+					justify-content: space-around;
 				}
 			`}</style>
 		</div>

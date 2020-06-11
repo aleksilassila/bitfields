@@ -16,17 +16,15 @@ class Config:
 	shootDelay = 4/(tickrate + 3) # Seconds
 	mineDelay = 2 # Seconds
 	
-
 	geyserChange = 15 # 1/15 change
-	
 	geyserLifespan = 20 # min
 	geyserGain = 2 # Per minute
 	geyserMaxGain = minute * 8
 
-	doorCost = 1000
-	doorHealth = 3
-	fortifyCost = 300
-	fortifyHealth = 3
+	doorCost = 400
+	doorHealth = 6
+	fortifyCost = 100
+	fortifyHealth = 5
 
 	botAmount = (mapDimensions[0] * mapDimensions[1]) / (60**2) # 1 bot per 60^2 area
 	botRandomTurnChange = 20

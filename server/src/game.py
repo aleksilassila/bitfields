@@ -20,7 +20,7 @@ LADDER_CHAR = "H"
 BUSH_CHAR = "B"
 GEYSER_CHAR = "M"
 DOOR_CHAR = "D"
-FORTIFIED_CHAR = "▓"
+FORTIFIED_CHAR = "█"
 EMPTY_CHAR = " "
 
 # Cant shoot nor move through
