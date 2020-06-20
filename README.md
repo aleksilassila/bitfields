@@ -12,7 +12,7 @@ My latest project, a text-based .io style game powered by python, websockets and
 
 Inside `bitfields/server`:
 
--   Make sure you have at least python3.7 installed.
+-   Make sure you have **at least python 3.7** installed.
 
 -   `pip3 install -r requirements.txt`
 
@@ -47,7 +47,6 @@ All help is much appreciated, so feel free to contribute.
 ## To Do
 
 -   Spawn points
--   Reduce amount of loops: make more efficient
 -   Cave rooms / systems
 -   Breach ammunition? Mines?
 -   Announce kills / deaths

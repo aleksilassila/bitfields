@@ -15,7 +15,7 @@ MINUTE = 60 # Make 30 to make game run 2x faster
 SHOOTDELAY = 4/(TICKRATE + 3) # Seconds
 MINEDELAY = 2 # Seconds
 
-GEYSERCHANCE = 3 # 1/15 chance
+GEYSERCHANCE = 15 # 1/15 chance
 GEYSERLIFESPAN = 20 # min
 GEYSERGAIN = 2 # Per minute
 GEYSERMAXGAIN = MINUTE * 8
