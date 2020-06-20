@@ -14,7 +14,6 @@ const Button = ({ value, className, ...rest }) => (
 				color: lime;
 				text-shadow: 0 0 3px lime;
 				border: 2px solid #00ff00;
-				box-shadow: 0 0 5px 0px lime;
 
 				padding: 0.5rem 1rem;
 			}
