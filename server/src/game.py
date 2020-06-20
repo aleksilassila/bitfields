@@ -3,28 +3,11 @@ import json
 from random import randrange
 from time import time
 from math import floor, ceil
-from collections import Counter
 
-from config import Config
+from config import *
 from src.generator import Generator
-from src.bullet import Bullet
-from src.gameStructures import Door, Fortified, Geyser
+from src.gameStructures import Geyser
 from src.ai import Bot
-
-PLAYER_CHAR = "@"
-WALL_CHAR = "#"
-BOULDER_CHAR = "O"
-GRASS_CHAR = "."
-GRASS_ALT_CHAR = "_"
-LADDER_CHAR = "H"
-BUSH_CHAR = "B"
-GEYSER_CHAR = "M"
-DOOR_CHAR = "D"
-FORTIFIED_CHAR = "█"
-EMPTY_CHAR = " "
-
-# Cant shoot nor move through
-PLAYER_CAN_MOVE_THROUGH = [EMPTY_CHAR, GRASS_CHAR, GRASS_ALT_CHAR, LADDER_CHAR, BUSH_CHAR, DOOR_CHAR]
 
 class Game:
     def __init__(self):
@@ -51,7 +34,7 @@ class Game:
         # Game managment
         self.titlesToUpdate = []
         self.deadConnections = []
-        self.mapDimensions = Config.mapDimensions
+        self.mapDimensions = MAPDIMENSIONS
         gen = Generator(self.mapDimensions[0], self.mapDimensions[1], -200)
 
         self.map = [gen.getUnderworld(), gen.getOverworld()]
@@ -66,7 +49,7 @@ class Game:
 
         # Create initial bots
         botId = 0
-        for x in range(0, round(Config.botAmount)):
+        for x in range(0, round(BOTAMOUNT)):
 
             if x % 2 == 0: # 1/2 of bot amount in overworld
                 self.botsInactive[botId] = Bot(self, self.getSpawnPosition(), 1)
@@ -83,7 +66,7 @@ class Game:
 
             self.moveBullets()
 
-            if tickCount % (2 * Config.tickrate) == 0: # Every around 2 seconds
+            if tickCount % (2 * TICKRATE) == 0: # Every around 2 seconds
                 await self.updateStats()
                 self.revivePlayers()
 
@@ -96,19 +79,19 @@ class Game:
 
                 # Do actions
                 if "m" in player.queue and player.position[0] != None: # Fix this
-                    self.movePlayer(playerId, player.facing)
+                    player.move()
 
                 if "s" in player.queue:
-                    self.shoot(playerId)
+                    player.shoot()
 
                 if "a" in player.queue:
-                    await self.action(playerId)
+                    await player.action()
 
                 if "d" in player.queue:
-                    self.placeDoor(playerId)
+                    player.placeDoor()
 
                 if "f" in player.queue:
-                    self.fortify(playerId)
+                    player.fortifyBoulder()
 
                 # Create chunk map of activated
                 for chunk in player.chunks:
@@ -131,7 +114,7 @@ class Game:
             for botId in dict(self.botsInactive):
                 if self.botsInactive[botId].chunk in chunksActivated:
                     self.bots[botId] = self.botsInactive.pop(botId)
-                    if Config.logging: print(f"[G] Active bot: {botId}")
+                    if LOGGING: print(f"[G] Active bot: {botId}")
 
             # Bot loop
             for botId in dict(self.bots):
@@ -139,7 +122,7 @@ class Game:
 
                 if not bot.chunk in chunks:
                     self.botsInactive[botId] = self.bots.pop(botId)
-                    if Config.logging: print(f"[G] Disabled bot: {botId}")
+                    if LOGGING: print(f"[G] Disabled bot: {botId}")
 
                 else:
                     lastBotPos = bot.pos
@@ -163,7 +146,7 @@ class Game:
                 self.removeDeadConnections()
 
             await self.updatePlayers()
-            await asyncio.sleep(1/Config.tickrate)
+            await asyncio.sleep(1/TICKRATE)
 
         tickCount = 1
         print("Server started.")
@@ -171,7 +154,7 @@ class Game:
             lastChunks = []
             await tick()
 
-            if tickCount >= Config.tickrate * 2:
+            if tickCount >= TICKRATE * 2:
                 tickCount = 1
             else: tickCount += 1
 
@@ -200,8 +183,8 @@ class Game:
         for geyserId in self.geysers:
             state = 0
             diff = time() - self.geysers[geyserId].lastCollected
-            if diff > 6 * Config.minute: state = 2
-            elif diff > 3 * Config.minute: state = 1
+            if diff > 6 * MINUTE: state = 2
+            elif diff > 3 * MINUTE: state = 1
             geysers[geyserId] = {
                 "p": self.geysers[geyserId].position,
                 "f": self.geysers[geyserId].floor,
@@ -290,7 +273,6 @@ class Game:
                 self.deadConnections = []
             except Exception as e:
                 if self.logging: print(e)
-                print(e)
         
 
     async def managePlayer(self, playerId):
@@ -301,7 +283,7 @@ class Game:
             handshake = json.loads(await player.socket.recv())
 
             if "name" in handshake:
-                if handshake["name"] != "" and len(handshake["name"]) <= Config.nameMaxLen:
+                if handshake["name"] != "" and len(handshake["name"]) <= MAXNAMELENGTH:
                     player.name = handshake["name"]
             else:
                 raise Exception("No name provided")
@@ -320,7 +302,7 @@ class Game:
 
             await player.socket.send(json.dumps({
                 "map": mapToSend,
-                "tickrate": Config.tickrate,
+                "tickrate": TICKRATE,
                 "playerId": playerId
             }))
 
@@ -432,38 +414,34 @@ class Game:
 
     def getChunk(self, pos, axis = None):
         if axis == "x":
-            return floor(pos[0] / Config.chunkSize)
+            return floor(pos[0] / CHUNKSIZE)
 
         elif axis == "y":
-            return floor(pos[1] / Config.chunkSize)
+            return floor(pos[1] / CHUNKSIZE)
 
-        return (floor(pos[0] / Config.chunkSize), floor(pos[1] / Config.chunkSize))
+        return (floor(pos[0] / CHUNKSIZE), floor(pos[1] / CHUNKSIZE))
 
     def getChunksAround(self, pos):
         output = []
 
         topLeftCorner = [
-            pos[0] - floor(Config.clientDimensions[0]/2),
-            pos[1] - floor(Config.clientDimensions[1]/2)
+            pos[0] - floor(CLIENTDIMENSIONS[0]/2),
+            pos[1] - floor(CLIENTDIMENSIONS[1]/2)
         ]
 
         if topLeftCorner[0] < 0: topLeftCorner[0] = 0
         if topLeftCorner[1] < 0: topLeftCorner[1] = 0
-        if topLeftCorner[0] + Config.clientDimensions[0] >= Config.mapDimensions[0]:
-            topLeftCorner[0] = Config.mapDimensions[0] - Config.clientDimensions[0]
-        if topLeftCorner[1] + Config.clientDimensions[1] >= Config.mapDimensions[1]:
-            topLeftCorner[1] = Config.mapDimensions[1] - Config.clientDimensions[1]
+        if topLeftCorner[0] + CLIENTDIMENSIONS[0] >= MAPDIMENSIONS[0]:
+            topLeftCorner[0] = MAPDIMENSIONS[0] - CLIENTDIMENSIONS[0]
+        if topLeftCorner[1] + CLIENTDIMENSIONS[1] >= MAPDIMENSIONS[1]:
+            topLeftCorner[1] = MAPDIMENSIONS[1] - CLIENTDIMENSIONS[1]
 
-        maxAmountOfChunksX = ceil(Config.clientDimensions[0] / Config.chunkSize) + 1
-        maxAmountOfChunksY = ceil(Config.clientDimensions[1] / Config.chunkSize) + 1
-
-        # lastChunkX = ceil(Config.mapDimensions[0] / Config.chunkSize) - 1
-        # lastChunkY = ceil(Config.mapDimensions[1] / Config.chunkSize) - 1
+        maxAmountOfChunksX = ceil(CLIENTDIMENSIONS[0] / CHUNKSIZE) + 1
+        maxAmountOfChunksY = ceil(CLIENTDIMENSIONS[1] / CHUNKSIZE) + 1
 
         for y in range(maxAmountOfChunksY):
             for x in range(maxAmountOfChunksX):
-                chunk = self.getChunk((topLeftCorner[0] + x * Config.chunkSize, topLeftCorner[1] + y * Config.chunkSize))
-                # if not (chunk[0] < 0 or chunk[1] < 0 or chunk[0] > lastChunkX or chunk[1] > lastChunkY):
+                chunk = self.getChunk((topLeftCorner[0] + x * CHUNKSIZE, topLeftCorner[1] + y * CHUNKSIZE))
                 output.append(chunk)
 
         return output
@@ -474,64 +452,6 @@ class Game:
             
             if self.getTitle(pos, floor = floor) in PLAYER_CAN_MOVE_THROUGH:
                 return pos
-
-    def movePlayer(self, playerId, direction):
-        player = self.players[playerId]
-        
-        pos = self.getNextPos(player.position, player.facing)
-
-        if self.mapDimensions[0] - 1 >= pos[0] >= 0 and self.mapDimensions[1] - 1 >= pos[1] >= 0:
-            title = self.getTitle(pos, player.floor)
-
-            if title == LADDER_CHAR:
-                player.floor = 0 if player.floor == 1 else 1
-
-            # Check if door is owned by you
-            elif title == DOOR_CHAR:
-                for doorId in self.doors:
-                    if self.doors[doorId].position == pos and self.doors[doorId].floor == player.floor:
-                        if self.doors[doorId].ownerId != playerId:
-                            return
-                        break
-
-            # Check if killed by bot
-            for botId in self.bots:
-                if self.bots[botId].pos == pos and self.bots[botId].floor == player.floor:
-                    self.kill(playerId, None)
-
-            if title in PLAYER_CAN_MOVE_THROUGH:
-                player.position = pos
-
-                # if pos[0] % Config.chunkSize == 0 or pos[1] % Config.chunkSize == 0:
-                player.chunks = self.getChunksAround(pos)
-
-    def shoot(self, playerId):
-        index = self.bulletsIndex
-        player = self.players[playerId]
-
-        now = time()
-        if now - player.shootTime < Config.shootDelay:
-            return
-
-        player.shootTime = now
-
-        self.bulletsIndex += 1
-        if self.bulletsIndex > 65535:
-            self.bulletsIndex = 0
-
-        pos = self.getNextPos(player.position, player.facing)
-
-        for playerKey in self.players:
-            if self.players[playerKey].position == pos and player.floor == self.players[playerKey].floor:
-                self.kill(playerKey, playerId)
-                return
-
-        if self.mapDimensions[0] - 1 < pos[0] or pos[0] < 0 or self.mapDimensions[1] - 1 < pos[1] or pos[1] < 0:
-            return
-        elif not self.getTitle(pos, player.floor) in PLAYER_CAN_MOVE_THROUGH:
-            return
-
-        self.bullets[index] = Bullet(index, playerId, pos, player.floor, player.facing)
 
     def moveBullets(self):
         for bulletId in dict(self.bullets):
@@ -591,129 +511,10 @@ class Game:
                     self.titlesToUpdate.append((pos[0], pos[1], floor))
                     break
 
-    def pick(self, player, pos):
-        player.bouldersPicked += 1
-        self.map[player.floor][pos[1]][pos[0]] = EMPTY_CHAR
-        self.titlesToUpdate.append((pos[0], pos[1], player.floor))
+    def createGeyser(self, pos, floor):
+        self.map[floor][pos[1]][pos[0]] = EMPTY_CHAR
 
-    def place(self, player, pos):
-        player.bouldersPicked -= 1
-        self.map[player.floor][pos[1]][pos[0]] = BOULDER_CHAR
-        self.titlesToUpdate.append((pos[0], pos[1], player.floor))
+        geyserId = self.geysersIndex
+        self.geysersIndex += 1
 
-    async def mineWall(self, player, pos, title):
-        now = time()
-        if now - player.mineTime < Config.mineDelay:
-            return
-
-        player.mineTime = now
-
-        if title == WALL_CHAR:
-            if randrange(0, Config.geyserChange) == 0: # 1/15 Change of finding a geyser
-                self.map[player.floor][pos[1]][pos[0]] = EMPTY_CHAR
-
-                geyserId = self.geysersIndex
-                self.geysersIndex += 1
-
-                self.geysers[geyserId] = Geyser(geyserId, pos, player.floor)
-
-            else: # Just break the wall
-                self.map[player.floor][pos[1]][pos[0]] = BOULDER_CHAR
-                self.titlesToUpdate.append((pos[0], pos[1], player.floor))
-        elif title == DOOR_CHAR:
-            for doorId in self.doors:
-                if pos == self.doors[doorId].position:
-                    door = self.doors[doorId]
-                    door.health -= 1
-                    
-                    if door.health <= 0:
-                        self.doors.pop(doorId)
-                        self.titlesToUpdate.append((pos[0], pos[1], player.floor))
-                    else:
-                        await self.sendAnimation("b", pos, player.floor)
-
-                    break
-
-        elif title == FORTIFIED_CHAR:
-            for fortifyId in self.fortified:
-                if pos == self.fortified[fortifyId].position:
-                    fortified = self.fortified[fortifyId]
-                    fortified.health -= 1
-                    
-                    if fortified.health <= 0:
-                        self.fortified.pop(fortifyId)
-                        self.titlesToUpdate.append((pos[0], pos[1], player.floor))
-                    else:
-                        await self.sendAnimation("b", pos, player.floor)
-
-                    break
-
-    async def action(self, playerId):
-        player = self.players[playerId]
-        pos = self.getNextPos(player.position, player.facing)
-        title = self.getTitle(pos, player.floor)
-
-        if title == False:
-            return
-
-        if title == EMPTY_CHAR and player.bouldersPicked > 0:
-            self.place(player, pos)
-        elif title == BOULDER_CHAR and player.bouldersPicked < 2:
-            self.pick(player, pos)
-        elif title in [WALL_CHAR, DOOR_CHAR, FORTIFIED_CHAR]:
-            await self.mineWall(player, pos, title)
-        elif title == GEYSER_CHAR:
-            for geyserId in self.geysers:
-                if self.geysers[geyserId].position == pos:
-                    self.collectGeysir(playerId, geyserId)
-                    break
-
-    def collectGeysir(self, playerId, geyserId):
-        geyser = self.geysers[geyserId]
-        now = time()
-        diff = round(now - geyser.lastCollected)
-        gain = diff * Config.geyserGain if diff * Config.geyserGain <= Config.geyserMaxGain else Config.geyserMaxGain
-
-        self.players[playerId].money += gain
-        self.players[playerId].score += gain
-
-        if geyser.deathTime < now:
-            self.geysers.pop(geyserId)
-
-        geyser.lastCollected = now
-
-    def placeDoor(self, playerId):
-        player = self.players[playerId]
-        pos = self.getNextPos(player.position, player.facing)
-        title = self.getTitle(pos, player.floor)
-
-        if player.money < Config.doorCost:
-            return
-
-        if title == EMPTY_CHAR:
-            doorId = self.doorsIndex
-            self.doorsIndex += 1
-
-            self.doors[doorId] = Door(pos, player.floor, playerId)
-
-            player.money -= Config.doorCost
-            self.titlesToUpdate.append((pos[0], pos[1], player.floor))
-
-    def fortify(self, playerId):
-        player = self.players[playerId]
-        pos = self.getNextPos(player.position, player.facing)
-        title = self.getTitle(pos, player.floor)
-
-        if player.money < Config.fortifyCost:
-            return
-
-        if title == BOULDER_CHAR:
-            self.map[player.floor][pos[1]][pos[0]] = EMPTY_CHAR
-
-            fortifyId = self.fortifyIndex
-            self.fortifyIndex += 1
-
-            self.fortified[fortifyId] = Fortified(pos, player.floor)
-
-            player.money -= Config.fortifyCost
-            self.titlesToUpdate.append((pos[0], pos[1], player.floor))
+        self.geysers[geyserId] = Geyser(geyserId, pos, floor)

@@ -1,17 +1,6 @@
 from random import randrange
-from config import Config
 
-PLAYER_CHAR = "@"
-WALL_CHAR = "#"
-BOULDER_CHAR = "O"
-GRASS_CHAR = "."
-GRASS_ALT_CHAR = "_"
-LADDER_CHAR = "H"
-BUSH_CHAR = "B"
-GEYSIR_CHAR = "M"
-DOOR_CHAR = "D"
-FORTIFIED_CHAR = "█"
-EMPTY_CHAR = " "
+from config import *
 
 CAN_MOVE_THROUGH = [EMPTY_CHAR, GRASS_ALT_CHAR, GRASS_CHAR]
 
@@ -60,7 +49,7 @@ class Bot:
 
 	def moveRandom(self):
 		# Do random turns occasionally
-		if randrange(0, Config.botRandomTurnChange) == 0:
+		if randrange(0, BOTRANDOMTURNCHANCE) == 0:
 			self.zombieToDir = randrange(0, 4)
 
 		tries = 0
@@ -81,7 +70,7 @@ class Bot:
 
 	def sniffPlayers(self):
 		# Bots do errors too!
-		if randrange(Config.botErrorRate) == 0:
+		if randrange(BORERRORRATE) == 0:
 			return
 
 		def getPos(direction, steps):
@@ -93,7 +82,7 @@ class Bot:
 
 
 		blockedDirections = []
-		for i in range(0, Config.botSniffRange):
+		for i in range(0, BOTSNIFFRANGE):
 			for direction in range(0, 4):
 				if not direction in blockedDirections:
 					nextPos = getPos(direction, i)

@@ -2,7 +2,7 @@ import asyncio
 import websockets
 from time import sleep, time
 
-from config import Config
+from config import *
 from src.game import Game
 from src.player import Player
 
@@ -12,7 +12,7 @@ async def handleClient(ws, path):
 	global playerId
 	thisPlayerId = playerId
 
-	game.players[thisPlayerId] = Player(thisPlayerId, ws, game.getSpawnPosition(), Config.defaultName)
+	game.players[thisPlayerId] = Player(game, thisPlayerId, ws, game.getSpawnPosition(), DEFAULTNAME)
 
 	playerId += 1
 	print(f"[+] Connection from {ws.remote_address}")
@@ -23,14 +23,14 @@ async def handleClient(ws, path):
 
 	except Exception as e:
 		print(f"[-] Dead connection for {thisPlayerId}")
-		if Config.logging: print(f"Error: {e}")
+		if LOGGING: print(f"Error: {e}")
 		game.isDeadConnections = True
 		game.deadConnections.append(thisPlayerId)
 
 game = Game()
 
-address = Config.serverAddress if Config.serverAddress != None else "0.0.0.0"
-ip = int(Config.serverIp) if Config.serverIp != None else 8765
+address = SERVERADDRESS if SERVERADDRESS != None else "0.0.0.0"
+ip = int(SERVERIP) if SERVERIP != None else 8765
 
 loop = asyncio.get_event_loop()
 loop.run_until_complete(asyncio.gather(

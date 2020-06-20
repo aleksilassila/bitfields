@@ -1,32 +1,46 @@
-class Config:
-	# Production
-	serverAddress = None
-	serverIp = None
+# For production
+SERVERADDRESS = None
+SERVERIP = None
 
-	chunkSize = 16
-	mapDimensions = (chunkSize * 5, chunkSize * 5) # Min 61*39
-	clientDimensions = (61, 39)
-	defaultName = "An unnamed bit"
-	nameMaxLen = 20
+CHUNKSIZE = 16
+MAPDIMENSIONS = (CHUNKSIZE * 5, CHUNKSIZE * 5) # Min 61*39
+CLIENTDIMENSIONS = (61, 39)
+DEFAULTNAME = "An unnamed bit"
+MAXNAMELENGTH = 20
 
-	logging = True
-	tickrate = 15
+LOGGING = True
+TICKRATE = 15
 
-	minute = 60 # Make 30 to make game run 2x faster
-	shootDelay = 4/(tickrate + 3) # Seconds
-	mineDelay = 2 # Seconds
-	
-	geyserChange = 15 # 1/15 change
-	geyserLifespan = 20 # min
-	geyserGain = 2 # Per minute
-	geyserMaxGain = minute * 8
+MINUTE = 60 # Make 30 to make game run 2x faster
+SHOOTDELAY = 4/(TICKRATE + 3) # Seconds
+MINEDELAY = 2 # Seconds
 
-	doorCost = 400
-	doorHealth = 6
-	fortifyCost = 100
-	fortifyHealth = 5
+GEYSERCHANCE = 3 # 1/15 chance
+GEYSERLIFESPAN = 20 # min
+GEYSERGAIN = 2 # Per minute
+GEYSERMAXGAIN = MINUTE * 8
 
-	botAmount = (mapDimensions[0] * mapDimensions[1]) / (60**2) # 1 bot per 60^2 area
-	botRandomTurnChange = 20
-	botSniffRange = 10
-	botErrorRate = 10 # 1/10
+DOORCOST = 400
+DOORHEALTH = 6
+FORTIFYCOST = 100
+FORTIFYHEALTH = 5
+
+BOTAMOUNT = (MAPDIMENSIONS[0] * MAPDIMENSIONS[1]) / (60**2) # 1 bot per 60^2 area
+BOTRANDOMTURNCHANCE = 20
+BOTSNIFFRANGE = 10
+BORERRORRATE = 10 # 1/10
+
+PLAYER_CHAR = "@"
+WALL_CHAR = "#"
+BOULDER_CHAR = "O"
+GRASS_CHAR = "."
+GRASS_ALT_CHAR = "_"
+LADDER_CHAR = "H"
+BUSH_CHAR = "B"
+GEYSER_CHAR = "M"
+DOOR_CHAR = "D"
+FORTIFIED_CHAR = "█"
+EMPTY_CHAR = " "
+
+# Can't shoot nor move through
+PLAYER_CAN_MOVE_THROUGH = [EMPTY_CHAR, GRASS_CHAR, GRASS_ALT_CHAR, LADDER_CHAR, BUSH_CHAR, DOOR_CHAR]
