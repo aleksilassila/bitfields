@@ -358,10 +358,10 @@ const Home = () => {
                     />
                 </div>
             </div>
-            <RoundButton
+            <Button
                 id="help-button"
                 onClick={() => setShowHelp(true)}
-                value="?"
+                value="How to play?"
             />
             <div id="game-container">
                 <div id="game-wrapper">
@@ -488,7 +488,6 @@ const Home = () => {
                     max-width: 200px;
 
                     border: 2px solid #00ff00;
-                    box-shadow: 0 0 5px 0px lime;
 
                     flex: 1 0 auto;
                 }
@@ -536,6 +535,8 @@ const Home = () => {
                     position: absolute;
                     top: 1em;
                     right: 1em;
+
+                    opacity: 0.7;
                 }
 
                 ul {

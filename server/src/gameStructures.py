@@ -1,5 +1,5 @@
 from time import time
-from config import Config
+from config import *
 
 class Geyser:
 	def __init__(self, geyserId, position, floor):
@@ -10,8 +10,7 @@ class Geyser:
 		self.floor = floor
 
 		self.lastCollected = now
-		self.deathTime = now + Config.geyserLifespan * Config.minute
-
+		self.deathTime = now + GEYSERLIFESPAN * MINUTE
 
 class Door:
 	def __init__(self, position, floor, ownerId):
@@ -19,11 +18,11 @@ class Door:
 		self.floor = floor
 		self.ownerId = ownerId
 
-		self.health = Config.doorHealth
+		self.health = DOORHEALTH
 
 class Fortified:
 	def __init__(self, position, floor):
 		self.position = position
 		self.floor = floor
 
-		self.health = Config.fortifyHealth
+		self.health = FORTIFYHEALTH
