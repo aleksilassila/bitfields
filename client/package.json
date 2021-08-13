@@ -9,7 +9,7 @@
     "start": "env NODE_ENV=production next start -p 8080"
   },
   "dependencies": {
-    "next": "9.3.6",
+    "next": "11.1.0",
     "react": "16.13.1",
     "react-dom": "16.13.1"
   }
